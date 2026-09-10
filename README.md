@@ -33,7 +33,33 @@ https://github.com/user-attachments/assets/9d12baba-0e89-40e9-b9f0-33524349401d
 | 已按確認，卻沒收到成功回覆 | 先查原操作是否已保存；若已完成，就顯示既有結果，不再建立一次。 |
 | 已確認的操作尚未完成，服務就重啟 | 從保存的紀錄恢復仍有效的操作，避免遺漏或重複執行。 |
 
-LLM 只負責提議；授權與版本由程式檢查，預約與提交收據一起寫入 SQLite，讓恢復流程有依據。
+## 誰負責提議，誰能修改預約？
+
+```mermaid
+flowchart TB
+    UI["工作台：對話、表單與確認"]
+    subgraph Server["FastAPI 後端"]
+        Plan["提議處理：Mock 或 LLM"]
+        Rules["業務規則與授權檢查"]
+        Identity["可信工作階段身分"]
+    end
+    DB[("SQLite：預約、操作與收據")]
+    UI -->|對話需求| Plan
+    Plan -->|只提出操作建議| Rules
+    UI -->|表單提議或明確確認| Rules
+    Identity --> Rules
+    Rules <-->|讀取狀態；確認有效才變更預約| DB
+    Rules -->|確認單與查證結果| UI
+```
+
+提議可以保存為草案，但變更預約前必須經過使用者確認與後端檢查。LLM 無法自行確認，也不能指定使用者身分。圖中箭頭表示責任分工，模型呼叫在資料庫交易之外。
+
+<details>
+<summary>深入理解：逾時恢復與操作狀態</summary>
+
+[查看時序圖與狀態圖](docs/architecture.md)：說明回覆遺失後如何查回結果，以及反悔、過期和重新授權的界線。
+
+</details>
 
 ## 用結果驗證設計
 
