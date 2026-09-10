@@ -17,6 +17,7 @@ class BudgetExceeded(RuntimeError):
 class OpenAIModel:
     # Official standard text rates checked 2026-09-10, USD per token.
     INPUT_RATE = 0.40 / 1_000_000
+    CACHED_INPUT_RATE = 0.10 / 1_000_000
     OUTPUT_RATE = 1.60 / 1_000_000
 
     def __init__(
@@ -86,6 +87,12 @@ class OpenAIModel:
                 )
                 response.raise_for_status()
                 data = response.json()
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            self._record({"request": self.requests, "state": "http_error", "status": status})
+            raise RuntimeError(
+                f"Model API returned HTTP {status}; pilot stopped, reservation retained"
+            ) from None
         except (httpx.HTTPError, ValueError):
             self._record({"request": self.requests, "state": "unknown"})
             raise RuntimeError(
@@ -95,8 +102,10 @@ class OpenAIModel:
         if "prompt_tokens" in usage and "completion_tokens" in usage:
             self.input_tokens += usage["prompt_tokens"]
             self.output_tokens += usage["completion_tokens"]
+            cached = usage.get("prompt_tokens_details", {}).get("cached_tokens", 0)
             cost = (
-                usage["prompt_tokens"] * self.INPUT_RATE
+                (usage["prompt_tokens"] - cached) * self.INPUT_RATE
+                + cached * self.CACHED_INPUT_RATE
                 + usage["completion_tokens"] * self.OUTPUT_RATE
             )
             self.actual_usd += cost

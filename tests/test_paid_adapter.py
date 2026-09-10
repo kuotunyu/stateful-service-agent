@@ -79,3 +79,48 @@ def test_cost_limit_blocks_before_external_call(tmp_path):
     )
     with pytest.raises(BudgetExceeded):
         model.respond([{"role": "user", "content": "查詢"}], ModelConfig())
+
+
+def test_http_rejection_reports_status_without_echoing_provider_body(tmp_path):
+    model = OpenAIModel(
+        "fake-test-key",
+        tmp_path / "ledger.jsonl",
+        authorized=True,
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                401, json={"error": {"message": "Invalid API key: fake-test-key"}}
+            )
+        ),
+    )
+    with pytest.raises(RuntimeError, match="HTTP 401") as error:
+        model.respond([{"role": "user", "content": "查詢"}], ModelConfig())
+    assert "fake-test-key" not in str(error.value)
+    assert "fake-test-key" not in model.ledger.read_text()
+
+
+def test_cached_input_uses_cached_rate_in_reported_cost(tmp_path):
+    model = OpenAIModel(
+        "fake-test-key",
+        tmp_path / "ledger.jsonl",
+        authorized=True,
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                200,
+                json={
+                    "choices": [
+                        {
+                            "finish_reason": "stop",
+                            "message": {"content": '{"tool":"finish","arguments":{"text":"查詢"}}'},
+                        }
+                    ],
+                    "usage": {
+                        "prompt_tokens": 1000,
+                        "completion_tokens": 20,
+                        "prompt_tokens_details": {"cached_tokens": 800},
+                    },
+                },
+            )
+        ),
+    )
+    model.respond([{"role": "user", "content": "查詢"}], ModelConfig())
+    assert model.actual_usd == pytest.approx(0.000192)

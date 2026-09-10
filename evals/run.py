@@ -56,6 +56,7 @@ def run_case(directory, case, strategy, model=None, config=None):
         for key in ("actual_usd", "reserved_usd", "requests", "input_tokens", "output_tokens")
     }
     result, error, flow_ok = {}, None, False
+    infrastructure_error = False
     behavior = case.get("behavior", "confirm")
     try:
         result = run_turn(
@@ -102,6 +103,7 @@ def run_case(directory, case, strategy, model=None, config=None):
                 flow_ok = service.operation(session, op["id"])["status"] == "committed"
     except (ValueError, RuntimeError, Conflict) as exc:
         error = str(exc)
+        infrastructure_error = isinstance(exc, RuntimeError)
     final = rows(service)
     actual = project([b for b in final if b["owner"] == "alice"])
     correct = actual == sorted(case["expected"], key=lambda b: (b["slot"], b["service"]))
@@ -136,6 +138,7 @@ def run_case(directory, case, strategy, model=None, config=None):
         "expected": case["expected"],
         "actual": actual,
         "error": error,
+        "infrastructure_error": infrastructure_error,
         "trace": result.get("trace", []),
         "response": result.get("text"),
         "usage": {key: getattr(model, key, 0) - value for key, value in usage_before.items()},
@@ -153,6 +156,10 @@ def run_suite(output, model=None):
             (output / "cases.json").write_text(
                 json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8"
             )
+            if results[-1]["infrastructure_error"]:
+                break
+        if results[-1]["infrastructure_error"]:
+            break
     summary = {
         "evidence": "real-model-pilot" if model else "scripted-mock-engineering-only",
         "model_capability_claim": "Small development pilot; not a general benchmark"
@@ -160,6 +167,9 @@ def run_suite(output, model=None):
         else "NONE: replay fixtures do not measure model ability",
         "config": asdict(ModelConfig()),
         "tasks_per_strategy": len(CASES),
+        "status": "incomplete" if results[-1]["infrastructure_error"] else "complete",
+        "attempted_tasks": len(results),
+        "stop_reason": results[-1]["error"] if results[-1]["infrastructure_error"] else None,
         "cost_usd": model.actual_usd if model else 0,
         "reserved_cost_usd": model.reserved_usd if model else 0,
         "requests": model.requests if model else 0,
@@ -169,12 +179,17 @@ def run_suite(output, model=None):
         subset = [r for r in results if r["strategy"] == strategy]
         times = sorted(r["latency_ms"] for r in subset)
         summary["strategies"][strategy] = {
-            "db_final_state_accuracy": sum(r["db_correct"] for r in subset) / len(subset),
+            "attempted_tasks": len(subset),
+            "db_final_state_accuracy": sum(r["db_correct"] for r in subset) / len(subset)
+            if subset
+            else None,
             "unauthorized_changes": sum(r["unauthorized_changes"] for r in subset),
             "duplicate_operations": sum(r["duplicate_operations"] for r in subset),
-            "task_success_rate": sum(r["task_success"] for r in subset) / len(subset),
-            "latency_p50_ms": statistics.median(times),
-            "latency_p95_ms": times[-1],
+            "task_success_rate": sum(r["task_success"] for r in subset) / len(subset)
+            if subset
+            else None,
+            "latency_p50_ms": statistics.median(times) if times else None,
+            "latency_p95_ms": times[-1] if times else None,
             "cost_usd": sum(r["usage"]["actual_usd"] for r in subset),
             "reserved_cost_usd": sum(r["usage"]["reserved_usd"] for r in subset),
             "requests": sum(r["usage"]["requests"] for r in subset),
