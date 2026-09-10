@@ -1,0 +1,41 @@
+{
+  "evidence": "scripted-mock-engineering-only",
+  "model_capability_claim": "NONE: replay fixtures do not measure model ability",
+  "config": {
+    "model": "gpt-4.1-mini-2025-04-14",
+    "temperature": 0,
+    "max_output_tokens": 500
+  },
+  "tasks_per_strategy": 12,
+  "cost_usd": 0,
+  "reserved_cost_usd": 0,
+  "requests": 0,
+  "strategies": {
+    "fixed": {
+      "db_final_state_accuracy": 1.0,
+      "unauthorized_changes": 0,
+      "duplicate_operations": 0,
+      "task_success_rate": 1.0,
+      "latency_p50_ms": 560.8745,
+      "latency_p95_ms": 708.883,
+      "cost_usd": 0,
+      "reserved_cost_usd": 0,
+      "requests": 0,
+      "input_tokens": 0,
+      "output_tokens": 0
+    },
+    "agent": {
+      "db_final_state_accuracy": 1.0,
+      "unauthorized_changes": 0,
+      "duplicate_operations": 0,
+      "task_success_rate": 1.0,
+      "latency_p50_ms": 593.239,
+      "latency_p95_ms": 743.317,
+      "cost_usd": 0,
+      "reserved_cost_usd": 0,
+      "requests": 0,
+      "input_tokens": 0,
+      "output_tokens": 0
+    }
+  }
+}

@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>維修預約工作台 · Stateful Service Agent</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <script defer src="/static/app.js"></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="/" aria-label="維修預約工作台首頁"
+        ><span class="brand-mark" aria-hidden="true">↳</span
+        ><span>REPAIR DESK<small>STATEFUL SERVICE AGENT</small></span></a
+      >
+      <div class="environment">
+        <span class="dot"></span>本機合成資料
+        <span class="mode">MOCK 模式</span>
+      </div>
+    </header>
+    <main>
+      <div class="intro">
+        <div>
+          <p class="eyebrow">維修服務 / 預約工作台</p>
+          <h1>把預約安排好。<br /><span>每一步，都有依據。</span></h1>
+        </div>
+        <p class="intro-note">
+          冷氣與洗衣機維修<br />每日 10:00 · 14:00 · 16:00<br /><span
+            id="identity"
+            >正在連線…</span
+          >
+        </p>
+      </div>
+      <div id="notice" class="notice hidden" role="status" aria-live="polite">
+        <span id="notice-text"></span
+        ><button id="retry" class="text-button hidden">重試傳送</button>
+      </div>
+      <div class="workspace">
+        <section class="conversation panel" aria-labelledby="chat-heading">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">一起安排</span>
+              <h2 id="chat-heading">預約對話</h2>
+            </div>
+            <span class="quiet-badge">先提議，再確認</span>
+          </div>
+          <div
+            id="messages"
+            class="messages"
+            role="log"
+            aria-label="預約對話紀錄"
+            aria-live="polite"
+          ></div>
+          <div class="suggestions">
+            <button data-prompt="我要預約冷氣維修，明天 10:00">
+              預約冷氣維修</button
+            ><button data-prompt="查詢我的預約">查詢預約</button
+            ><button data-prompt="先不要，放棄這次操作">先不要</button>
+          </div>
+          <form id="chat-form" class="composer">
+            <label class="sr-only" for="message">你的訊息</label
+            ><textarea
+              id="message"
+              rows="2"
+              placeholder="例如：改成後天 14:00"
+              maxlength="2000"
+              required
+            ></textarea
+            ><button id="send" class="primary" type="submit">
+              傳送 <span aria-hidden="true">↗</span>
+            </button>
+          </form>
+          <p class="composer-note">
+            送出新訊息會取代尚未提交的操作。Mock
+            支援範例句型，也可使用右側表單。
+          </p>
+        </section>
+        <aside class="right-column">
+          <section
+            id="confirmation-panel"
+            class="confirmation"
+            aria-labelledby="confirmation-heading"
+          >
+            <div class="panel-heading">
+              <div>
+                <span class="eyebrow">送出前，再看一眼</span>
+                <h2 id="confirmation-heading">操作確認單</h2>
+              </div>
+              <span class="ticket-icon" aria-hidden="true">✓</span>
+            </div>
+            <div id="confirmation"></div>
+          </section>
+          <section
+            class="panel bookings-panel"
+            aria-labelledby="bookings-heading"
+          >
+            <div class="panel-heading">
+              <div>
+                <span class="eyebrow">已保存的安排</span>
+                <h2 id="bookings-heading">
+                  目前預約 <span id="booking-count" class="count">0</span>
+                </h2>
+              </div>
+              <button id="refresh" class="text-button">重新查詢</button>
+            </div>
+            <div id="bookings"></div>
+          </section>
+          <details class="panel booking-form-panel">
+            <summary>用表單安排預約 <span aria-hidden="true">＋</span></summary>
+            <form id="booking-form">
+              <label for="service">維修項目</label
+              ><select id="service">
+                <option>冷氣維修</option>
+                <option>洗衣機維修</option>
+              </select>
+              <div class="form-row">
+                <div>
+                  <label for="date">日期（台北）</label
+                  ><input id="date" type="date" required />
+                </div>
+                <div>
+                  <label for="time">時段</label
+                  ><select id="time">
+                    <option>10:00</option>
+                    <option>14:00</option>
+                    <option>16:00</option>
+                  </select>
+                </div>
+              </div>
+              <button class="secondary" type="submit">建立待確認操作</button>
+            </form>
+          </details>
+        </aside>
+      </div>
+      <section class="panel execution" aria-labelledby="execution-heading">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">看得見的執行過程</span>
+            <h2 id="execution-heading">操作結果與紀錄</h2>
+          </div>
+          <button id="recover" class="secondary">查證結果與恢復</button>
+        </div>
+        <div id="result" class="result" aria-live="polite"></div>
+        <ol id="events" class="events"></ol>
+      </section>
+      <details class="demo panel">
+        <summary>可靠性示範 <span>逾時 / 反悔 / 重啟</span></summary>
+        <div class="demo-content">
+          <div>
+            <label for="fault">下一次確認的回覆情境</label
+            ><select id="fault">
+              <option value="none">正常提交</option>
+              <option value="before_commit">提交前逾時，等待查證或重啟</option>
+              <option value="after_commit">已提交，但回覆遺失</option>
+            </select>
+            <p>
+              選擇情境後提出並確認一筆操作，再按「查證結果與恢復」。此為明確注入的本機故障。
+            </p>
+          </div>
+          <div>
+            <strong>示範反悔</strong>
+            <p>選「提交前逾時」，確認後傳送「先不要」。查證時應無新增預約。</p>
+            <strong>示範程序重啟</strong>
+            <p>
+              提交前逾時後，停止本工作台的終端程序，再使用相同啟動命令啟動。保留瀏覽器與資料庫，即可看到恢復結果。
+            </p>
+          </div>
+        </div>
+      </details>
+    </main>
+    <footer>
+      <span>REPAIR DESK / LOCAL DEMO</span
+      ><span>結果來自資料庫查證 · 不連接真實維修服務 · 未使用真實模型</span>
+    </footer>
+  </body>
+</html>
