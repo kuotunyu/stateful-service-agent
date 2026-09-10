@@ -6,6 +6,38 @@ from test_browser import db_bookings, send
 pytest_plugins = ["test_browser"]
 
 
+def test_date_year_is_limited_and_invalid_year_cannot_propose(live_server):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(live_server["url"])
+        create_booking(page)
+        page.get_by_role("button", name="改期", exact=True).click()
+        posts = []
+        page.on("request", lambda r: posts.append(r.url) if r.method == "POST" else None)
+        for selector in ("#date", "#reschedule-date"):
+            expect(page.locator(selector)).to_have_attribute("max", "9999-12-31")
+        # Chromium's en-US date editor orders its segments month/day/year.
+        date = page.locator("#reschedule-date")
+        for _ in range(3):
+            date.press("ArrowLeft")
+        date.press("ArrowRight")
+        date.press("ArrowRight")
+        date.press_sequentially("111111")
+        assert len(date.input_value().split("-")[0]) == 4
+        # A programmatic/pasted extended year must also fail application validation.
+        page.locator("#reschedule-date").fill("11111-11-11")
+        page.get_by_role("button", name="預覽改期", exact=True).click()
+        expect(page.locator("#reschedule-error")).to_contain_text("四位數")
+        expect(page.locator("#reschedule-date")).to_be_focused()
+        assert posts == []
+        assert db_bookings(live_server)[0]["version"] == 1
+        page.locator("#reschedule-date").fill("2030-01-09")
+        page.get_by_role("button", name="預覽改期", exact=True).click()
+        expect(page.get_by_role("button", name="確認改期預約", exact=True)).to_be_visible()
+        browser.close()
+
+
 def create_booking(page):
     send(page, "預約冷氣維修 2030-01-08 10:00")
     page.get_by_role("button", name="確認建立預約", exact=True).click()

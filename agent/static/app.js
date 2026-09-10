@@ -513,6 +513,7 @@ function buildRescheduleEditor(booking) {
   const date = node("input");
   date.id = "reschedule-date";
   date.type = "date";
+  date.max = "9999-12-31";
   date.required = true;
   date.min = taipeiDate();
   date.value = rescheduleDraft.date;
@@ -572,7 +573,11 @@ function validateSlot(date, time, error) {
   const allowed = ["10:00", "14:00", "16:00"];
   let field = "";
   let message = "";
-  if (!date.value || new Date(`${date.value}T${time.value}:00+08:00`).getTime() <= Date.now()) {
+  const timestamp = new Date(`${date.value}T${time.value}:00+08:00`).getTime();
+  if (date.value && !/^\d{4}-\d{2}-\d{2}$/.test(date.value)) {
+    field = "date";
+    message = "年份必須為四位數，請重新選擇日期。";
+  } else if (!date.value || !Number.isFinite(timestamp) || timestamp <= Date.now()) {
     field = "date";
     message = "請選擇尚未過去的日期與時段。";
   } else if (!allowed.includes(time.value)) {
