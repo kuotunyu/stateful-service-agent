@@ -1,0 +1,22 @@
+{
+  "sha256": {
+    "evals/holdout-v1.json": "d17230784a58e0fc2bfeaa51093887b6e210430b8584d077481eba16e5a5afdd",
+    "evals/holdout.py": "ee043ef6cd2ac5aa3e204e54a5c9cf5f50fdeea10fd6abd08c00561748b5c888",
+    "agent/orchestration.py": "5d63c8d772b5a15334d436a63cd47139f7dc05482bd7d1c7810caf94bb087686",
+    "agent/models.py": "0566adb362ebb6438d9bea06130c281c4bef8e1789dd28d5560df6e72c08ceda",
+    "agent/service.py": "6dd3f82517463a3dd56604961dce8785b347579e1856d826ae6d98b2e584868d",
+    "agent/db.py": "a9753c2c23d2c6a75498efb798e6d4f03fb39e0e26192613f9c121f56f49362f",
+    "agent/openai_model.py": "881d20d802375940b0316deeb5de072477fa95508aac57d0e1affd19e24f6c58",
+    "agent/live_model.py": "89dd627508a7fd313769d9a52f2d9ad48105796699136e7425c10010b2437e52",
+    "evals/run.py": "5b99bddae6ad4e0dfd19d106e7b1376272340d028524277bfbf3a9d6a6754a32",
+    "agent/mock.py": "8863cc25b872d84946e9d44ae56d2431cdc139a6104fe5e7ce6c58a687fa8cb8"
+  },
+  "config": {
+    "model": "gpt-5.6-luna",
+    "temperature": 0,
+    "max_output_tokens": 500,
+    "reasoning_effort": "none"
+  },
+  "evidence": "frozen-new-task-evaluation",
+  "limitations": "Eight new cases authored with knowledge of implementation; unseen by the evaluated API before freeze, not an external benchmark. JSON answer contracts test exact facts rather than unrestricted conversational quality. Synthetic user supplies confirmation/recovery. One sample per case and strategy."
+}

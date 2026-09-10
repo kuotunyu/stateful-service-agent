@@ -4,7 +4,7 @@ Approved 2026-09-10. Workspace: `D:\AI-Portfolio\CC_github部隊\stateful-servic
 Future repository: `kuotunyu/stateful-service-agent`; no remote creation or publication.
 
 Goal: a repair booking UI whose reported outcome is backed by durable business state.
-Python + FastAPI serves a static browser UI and SQLite. CPU only, synthetic data, no paid calls.
+Python + FastAPI serves a static browser UI and SQLite. CPU only, synthetic data; paid calls require explicit opt-in.
 Model output proposes actions; server session identity, confirmation, policy and transactions
 remain authoritative. No network or GPU model is used by the default mock.
 
@@ -56,3 +56,10 @@ The receipt is the visual signature and carries real operation status, not decor
 - [x] Fake-model browser checks cover timeout/replay and historical mode labels. Real API smoke covers CRUD/query with independent DB checks; see `evaluations/live-smoke-01/report.md`.
 
 The local app remains single-process. No background broker, GPU, remote repository, or external business integration is required.
+
+## Frozen Luna evaluation (2026-09-10)
+
+- [x] Shared web/evaluation project allowance with per-run usage accounting.
+- [x] Exact JSON fact/refusal scoring and intermediate proposal scoring; wrong proposals cannot hide behind a later reversal.
+- [x] Freeze new cases, runtime and scorer before API exposure; one paid run, no post-result tuning.
+- [x] Publish local evidence including all 16 cases, DB projections, usage and failure. Both strategies DB 8/8; task success fixed 7/8, agent 8/8. This small internal holdout is not an external benchmark.

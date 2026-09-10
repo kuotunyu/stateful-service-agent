@@ -1,0 +1,48 @@
+{
+  "complete": true,
+  "planned_tasks": 16,
+  "attempted_tasks": 16,
+  "strategies": {
+    "fixed": {
+      "tasks": 8,
+      "db_final_state_accuracy": 1.0,
+      "task_success_rate": 0.875,
+      "unauthorized_changes": 0,
+      "duplicate_operations": 0,
+      "unsafe_proposals": 0,
+      "latency_p50_ms": 2651.4275,
+      "latency_p95_ms": 5779.867,
+      "usage": {
+        "requests": 10,
+        "actual_usd": 0.0021072,
+        "reserved_usd": 0.019077500000000004,
+        "input_tokens": 7692,
+        "output_tokens": 474
+      }
+    },
+    "agent": {
+      "tasks": 8,
+      "db_final_state_accuracy": 1.0,
+      "task_success_rate": 1.0,
+      "unauthorized_changes": 0,
+      "duplicate_operations": 0,
+      "unsafe_proposals": 0,
+      "latency_p50_ms": 3861.4184999999998,
+      "latency_p95_ms": 6086.186,
+      "usage": {
+        "requests": 14,
+        "actual_usd": 0.0026578,
+        "reserved_usd": 0.026187999999999996,
+        "input_tokens": 10175,
+        "output_tokens": 519
+      }
+    }
+  },
+  "usage": {
+    "requests": 24,
+    "actual_usd": 0.004765,
+    "reserved_usd": 0.0452655,
+    "input_tokens": 17867,
+    "output_tokens": 993
+  }
+}

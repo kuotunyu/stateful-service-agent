@@ -36,7 +36,7 @@ uv run --env-file .env python -m uvicorn agent.app:create_live_app --factory --h
 33 次請求及 USD 0.0897152 保守預留；總上限保持 **USD 1／144 次**。
 網頁顯示已知 token 費用、保守預留、未知用量筆數；每次先以短交易預留，
 網路逾時或重啟不退回預留，也不自動重送。**保留此目錄，刪除它會遺失後續用量紀錄。**
-評估 CLI 的獨立 ledger 不會自動匯入後續網頁帳本，另跑付費評估前必須核對剩餘授權。
+評估 CLI 與網頁現在共用此帳本；每輪另保存本輪用量，不會因換輸出目錄重置總預算。
 
 真實介面整合已驗證建立、改期、取消及查詢，新增 5 次 API、USD 0.0016772；
 截至該次驗證累計 38 次、USD 0.0117524。見 [整合驗證紀錄](docs/evaluations/live-smoke-01/report.md)。
@@ -45,6 +45,10 @@ uv run --env-file .env python -m uvicorn agent.app:create_live_app --factory --h
 包含一筆被正確攔下的時間格式錯誤及修正後四個成功流程；累計 44 次、USD 0.0130612。
 見 [Luna 遷移驗證](docs/evaluations/luna-migration-01/report.md)。歷史 4.1-mini 評估保留，不能算成 Luna 的能力證據。
 目前任務狀態與未完成項目見 [專案進度](docs/status.md)。
+
+新題組已完成凍結後單次實測：兩策略 DB 各 8/8；完整任務 fixed 7/8、agent 8/8，
+沒有越權修改或重複效果。唯一失敗是拒絕答案未遵守 JSON 格式。本輪 24 次 API、USD 0.004765。
+見 [Luna 新題組報告](docs/evaluations/luna-holdout-01/report.md)；樣本小，不能宣稱策略一般優劣。
 
 ## 五分鐘展示
 
@@ -112,6 +116,17 @@ uv run python -m evals.run --output artifacts/my-mock-run
 
 ## 真實模型 pilot：已完成首輪
 
+Luna 新題組先執行 mock，凍結 hash，再開啟付費。規則與限制見 [新題組程序](docs/evaluations/holdout-protocol.md)。
+以下命令皆使用新輸出路徑：
+
+```powershell
+uv run python -m evals.holdout --output artifacts/holdout-mock-new
+uv run python -m evals.holdout --freeze artifacts/holdout-new.freeze.json
+uv run --env-file .env python -m evals.holdout --output artifacts/holdout-paid-new --freeze artifacts/holdout-new.freeze.json --allow-paid
+```
+
+凍結題組重跑不再算未見題測試；看過失敗後調整提示，也應另立新題組。Mock 結果不算模型成績。
+
 候選 `gpt-4.1-mini-2025-04-14`、temperature 0、每次最多 500 output tokens；
 12 案 × 2 策略，總共最多 **144 次請求、USD 1**。達上限即停止請求。
 此快照是固定版本、低成本的初始基線，不宣稱是最新或最佳模型。
@@ -130,7 +145,7 @@ uv run --env-file .env python -m evals.run --output artifacts/paid-pilot-01 --al
 
 不要把金鑰貼進對話或讀取其他專案 `.env`。預設 UI 不讀取此金鑰。
 Adapter 只呼叫固定官方 endpoint，無自動重試。請求前以保守 token 上界預留費用並持久化 ledger；
-逾時保留預留額。既有 ledger 與輸出目錄不可重用，避免重啟重置同一輪預算。
+逾時保留預留額。既有輸出目錄不可重用；全專案共用持久預算，重啟與新一輪評估不會重置額度。
 價格須在真正執行前再核對；應用程式估算不含稅或帳戶級額外收費。
 真實端點已由首輪 33 次成功請求驗證。自動測試仍使用隔離的 HTTP 回覆，執行 `pytest` 不會產生 API 費用。
 
