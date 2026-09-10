@@ -1,0 +1,25 @@
+{
+  "sha256": {
+    "evals/holdout.py": "63bf4ec14747f2fa2cd3966e73238917bcb6e577908e7dd2325ca442a009d24e",
+    "agent/orchestration.py": "87638f3e7cdeee0da857b63693eab9aa0455068b046f12b6fb6a29e5c36eee65",
+    "agent/models.py": "0566adb362ebb6438d9bea06130c281c4bef8e1789dd28d5560df6e72c08ceda",
+    "agent/service.py": "61bcbc7873edff5f314b43522e7179c2cda6434ffccfeaedad69f093f47b5f2e",
+    "agent/db.py": "a9753c2c23d2c6a75498efb798e6d4f03fb39e0e26192613f9c121f56f49362f",
+    "agent/openai_model.py": "28e145ae7b62262c42907bb5378016f91c9d224a28323d85316ad292388a17bb",
+    "agent/live_model.py": "89dd627508a7fd313769d9a52f2d9ad48105796699136e7425c10010b2437e52",
+    "evals/run.py": "5b99bddae6ad4e0dfd19d106e7b1376272340d028524277bfbf3a9d6a6754a32",
+    "agent/mock.py": "34ede36471be9182296ff3dc07ccdb8a8b942012f035083acce0780b4372010a",
+    "evals/holdout-v2.json": "0a367ef8058ec830b02b659f6caea07098f7e812f00de7fffd0df30f183684a9",
+    "evals/holdout_v2.py": "e7feeeb95e5dd0daf5777ae78738999cd79e88a47ee55cb52cd905a13cc19f73",
+    "agent/app.py": "3e6fed86d864b37c571d7209cf292c422af5a8473f90d89e53f2d81eb24ae1d3",
+    "docs/evaluations/luna-holdout-02/protocol.md": "01775e5b79dda12773ea4168f0cfc718ef08ffc8e308ad12aa93fdc119c11278"
+  },
+  "config": {
+    "model": "gpt-5.6-luna",
+    "temperature": 0,
+    "max_output_tokens": 500,
+    "reasoning_effort": "none"
+  },
+  "evidence": "frozen-new-task-evaluation",
+  "limitations": "Six new synthetic cases authored with knowledge of the implementation and unseen by the evaluated API before freeze. This small, single-run suite measures model interpretation of follow-up, correction, targeting, exact JSON, refusal, and untrusted text; it is not an external blind benchmark. Synthetic users supply confirmation. Concurrency, idempotency, and recovery remain covered by deterministic engineering tests rather than model scoring."
+}

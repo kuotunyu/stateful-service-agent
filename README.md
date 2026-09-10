@@ -85,11 +85,13 @@ uv run --no-env-file python -m evals.holdout --output artifacts/holdout-mock-new
 測試使用隔離資料庫與假模型，不產生 API 費用。瀏覽器測試僅啟停自己的測試 server。
 Mock 通過是工程證據，不是模型能力證據。
 
-最新保存的真實模型基線為 [Luna 凍結新題組](docs/evaluations/luna-holdout-01/report.md)：
+最新 [Luna 新版針對性評估](docs/evaluations/luna-holdout-02/report.md)：6 題 × 2 策略，兩者 DB 與任務皆 6/6；22 次 API、USD 0.004663。題型與第一輪部分重疊，不能據此推論一般能力或改善幅度。
+
+第一輪保存基線為 [Luna 凍結新題組](docs/evaluations/luna-holdout-01/report.md)：
 固定流程 DB 8/8、任務 7/8；單一 Agent DB 8/8、任務 8/8；24 次 API、USD 0.004765。
 唯一任務失敗為拒絕答案未遵守 JSON 格式。樣本小，不能據此宣稱策略一般優劣。
 
-**審查修正後的程式與該次凍結來源不同，這些成績不是新版實測。**
+**第一輪成績屬於先前凍結來源，不能當作新版實測；新版結果請見第二輪報告。**
 新版評分增加確認前 DB／授權邊界檢查與 schema 拒絕統計；既有報告保持原樣。
 兩策略共用工具、政策與 Luna 設定；固定流程先提供 context，單一 Agent 自行選工具，每輪最多六步。
 判分比對預期／實際 DB，不使用 LLM judge；自由文字品質與廣泛泛化能力仍需獨立評估。
@@ -102,6 +104,7 @@ Mock 通過是工程證據，不是模型能力證據。
 
 - [目前進度](docs/status.md)、[審查修正](docs/review-fixes.md)、[新題組程序](docs/evaluations/holdout-protocol.md)。
 - [首次使用流程改善與驗收](docs/ux-review/2026-09-10/施工驗收紀錄.md)：操作入口、改期、錯誤接續、確認到期、評估閱讀與剩餘驗證限制。
+- [操作展示錄影與資料庫檢查點](docs/demo/README.md)。
 - 歷史：[初版實作](docs/implementation.md)、[4.1-mini 初測](docs/evaluations/paid-pilot-01/report.md)、[介面整合](docs/evaluations/live-smoke-01/report.md)。
 - 原始碼：[kuotunyu/stateful-service-agent](https://github.com/kuotunyu/stateful-service-agent)。工作台沒有對外部署。
 

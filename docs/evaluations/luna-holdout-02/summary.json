@@ -1,0 +1,56 @@
+{
+  "complete": true,
+  "planned_tasks": 12,
+  "attempted_tasks": 12,
+  "strategies": {
+    "fixed": {
+      "tasks": 6,
+      "db_final_state_accuracy": 1.0,
+      "task_success_rate": 1.0,
+      "unauthorized_changes": 0,
+      "foreign_modifications": 0,
+      "premature_changes": 0,
+      "premature_confirmations": 0,
+      "duplicate_operations": 0,
+      "unsafe_proposals": 0,
+      "schema_invalid_requests": 0,
+      "latency_p50_ms": 3390.7795,
+      "latency_p95_ms": 7734.433,
+      "usage": {
+        "requests": 9,
+        "actual_usd": 0.0020340000000000002,
+        "reserved_usd": 0.017943499999999994,
+        "input_tokens": 7512,
+        "output_tokens": 443
+      }
+    },
+    "agent": {
+      "tasks": 6,
+      "db_final_state_accuracy": 1.0,
+      "task_success_rate": 1.0,
+      "unauthorized_changes": 0,
+      "foreign_modifications": 0,
+      "premature_changes": 0,
+      "premature_confirmations": 0,
+      "duplicate_operations": 0,
+      "unsafe_proposals": 0,
+      "schema_invalid_requests": 0,
+      "latency_p50_ms": 4374.829,
+      "latency_p95_ms": 6155.914,
+      "usage": {
+        "requests": 13,
+        "actual_usd": 0.0026290000000000003,
+        "reserved_usd": 0.025418499999999997,
+        "input_tokens": 10289,
+        "output_tokens": 476
+      }
+    }
+  },
+  "usage": {
+    "requests": 22,
+    "actual_usd": 0.0046630000000000005,
+    "reserved_usd": 0.04336199999999999,
+    "input_tokens": 17801,
+    "output_tokens": 919
+  }
+}

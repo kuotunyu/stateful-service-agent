@@ -1,0 +1,103 @@
+[
+  {
+    "stage": "01-before-confirmation",
+    "bookings": []
+  },
+  {
+    "stage": "02-confirmed",
+    "bookings": [
+      {
+        "id": "9e00cfc3e04240f88177fc7d48eb90f0",
+        "owner": "demo-alice",
+        "service": "冷氣維修",
+        "slot": "2030-04-01T10:00:00+08:00",
+        "status": "active",
+        "version": 1
+      }
+    ]
+  },
+  {
+    "stage": "03-reversed-no-extra-booking",
+    "bookings": [
+      {
+        "id": "9e00cfc3e04240f88177fc7d48eb90f0",
+        "owner": "demo-alice",
+        "service": "冷氣維修",
+        "slot": "2030-04-01T10:00:00+08:00",
+        "status": "active",
+        "version": 1
+      }
+    ]
+  },
+  {
+    "stage": "04-lost-reply-recovered-once",
+    "bookings": [
+      {
+        "id": "9e00cfc3e04240f88177fc7d48eb90f0",
+        "owner": "demo-alice",
+        "service": "冷氣維修",
+        "slot": "2030-04-01T10:00:00+08:00",
+        "status": "active",
+        "version": 1
+      },
+      {
+        "id": "4f12fff3870f49c18e17bd4b1f0c0c79",
+        "owner": "demo-alice",
+        "service": "洗衣機維修",
+        "slot": "2030-04-02T14:00:00+08:00",
+        "status": "active",
+        "version": 1
+      }
+    ]
+  },
+  {
+    "stage": "05-before-process-restart",
+    "bookings": [
+      {
+        "id": "9e00cfc3e04240f88177fc7d48eb90f0",
+        "owner": "demo-alice",
+        "service": "冷氣維修",
+        "slot": "2030-04-01T10:00:00+08:00",
+        "status": "active",
+        "version": 1
+      },
+      {
+        "id": "4f12fff3870f49c18e17bd4b1f0c0c79",
+        "owner": "demo-alice",
+        "service": "洗衣機維修",
+        "slot": "2030-04-02T14:00:00+08:00",
+        "status": "active",
+        "version": 1
+      }
+    ]
+  },
+  {
+    "stage": "06-restart-recovered-once",
+    "bookings": [
+      {
+        "id": "9e00cfc3e04240f88177fc7d48eb90f0",
+        "owner": "demo-alice",
+        "service": "冷氣維修",
+        "slot": "2030-04-01T10:00:00+08:00",
+        "status": "active",
+        "version": 1
+      },
+      {
+        "id": "4f12fff3870f49c18e17bd4b1f0c0c79",
+        "owner": "demo-alice",
+        "service": "洗衣機維修",
+        "slot": "2030-04-02T14:00:00+08:00",
+        "status": "active",
+        "version": 1
+      },
+      {
+        "id": "c835c40728394760bc6f25410311f189",
+        "owner": "demo-alice",
+        "service": "冷氣維修",
+        "slot": "2030-04-03T16:00:00+08:00",
+        "status": "active",
+        "version": 1
+      }
+    ]
+  }
+]
