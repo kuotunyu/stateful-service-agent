@@ -77,6 +77,28 @@ def db_bookings(server):
         return [dict(r) for r in db.execute("SELECT * FROM bookings ORDER BY slot")]
 
 
+def test_evidence_browser_filters_failure_and_preserves_mobile_layout(live_server):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1440, "height": 1100})
+        errors = []
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.goto(live_server["url"] + "/evaluation")
+        expect(page.locator("#case-list > details")).to_have_count(16)
+        expect(page.locator("#comparison")).to_contain_text("7/8")
+        Path("artifacts").mkdir(exist_ok=True)
+        page.screenshot(path="artifacts/evaluation-desktop.png", full_page=True)
+        page.locator("#case-filter").select_option("failed")
+        expect(page.locator("#case-list > details")).to_have_count(1)
+        page.locator("#case-list > details > summary").click()
+        expect(page.locator(".case-body")).to_contain_text("other-842")
+        page.set_viewport_size({"width": 390, "height": 844})
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+        page.screenshot(path="artifacts/evaluation-mobile.png", full_page=True)
+        assert not errors
+        browser.close()
+
+
 def test_browser_crud_reversal_timeout_and_real_restart(live_server):
     artifacts = Path("artifacts")
     artifacts.mkdir(exist_ok=True)

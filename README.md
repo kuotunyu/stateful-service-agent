@@ -7,6 +7,22 @@
 
 ## 啟動
 
+已安裝 `uv` 的 Windows 電腦可直接雙擊 **`start.cmd`**，會以 Mock 啟動並開啟工作台。
+同一路徑服務已在執行時直接重用；其他服務占用連接埠時拒絕啟動，不會停止它。
+
+```powershell
+.\start.cmd --live
+uv run --no-env-file python -m agent.launch --status
+```
+
+`--live` 才會載入本專案 `.env`，介面仍先選 Mock，不會因啟動而呼叫 API。
+背景服務日誌在 `data/launcher-8765.log`；狀態查詢會顯示本服務 PID，若要手動停止，僅停止該 PID。
+不同埠也不能同時服務同一份預約資料庫，作業系統鎖會阻止第二個 server 啟動恢復程序。
+要展示 Ctrl+C／重啟流程，可改用下方前景啟動命令。
+
+工作台底部可開啟 **「查看模型評估與失敗紀錄」**，或直接前往 <http://127.0.0.1:8765/evaluation>。
+這是唯讀的保存結果，可篩選失敗、展開逐輪提議、比對 DB 與下載固定證據檔案，不會消耗 API 額度。
+
 已在 Windows、Python 3.14.5 驗證。在 PowerShell 執行：
 
 ```powershell

@@ -17,7 +17,8 @@
 | 獨立、未見題組的 Luna 能力比較 | 完成一輪小樣本 | 凍結後 8 題 × 2 策略；DB 兩者 8/8，任務 fixed 7/8、agent 8/8；作者知實作，非外部盲測 |
 | 查詢／拒絕回覆的判分強度 | 新題組已補強 | 明確 JSON 契約逐欄核對，反悔題也驗中間提案；自由文字品質不在此判分覆蓋內 |
 | 網頁與評估共用總預算 | 完成 | 相同 project allowance，單輪費用分開統計，不能用新目錄重置預算 |
-| 自動測試、啟動命令、失敗案例、架構說明 | 完成 | 62 項測試；README 與逐輪驗證紀錄 |
+| 一鍵啟動、服務狀態與評估結果頁 | 完成 | start.cmd、/api/health、/evaluation；占用埠拒絕、同 DB 單 server 鎖、唯讀證據檔案 |
+| 自動測試、啟動命令、失敗案例、架構說明 | 完成 | 71 項測試；README 與逐輪驗證紀錄 |
 | GitHub repo／push／公開發布／部署 | 未執行，等待授權 | 依原始要求只在本機開發；預定 kuotunyu/stateful-service-agent |
 
 最新證據見 [Luna 新題組結果](evaluations/luna-holdout-01/report.md)。累計 68 次 API、USD 0.0178262，仍在 USD 1 額度內。

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>評估證據 · Repair Desk</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <link rel="stylesheet" href="/static/evaluation.css" />
+    <script defer src="/static/evaluation.js"></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="/"
+        ><span class="brand-mark" aria-hidden="true">↳</span
+        ><span>REPAIR DESK<small>STATEFUL SERVICE AGENT</small></span></a
+      >
+      <a class="text-button" href="/">返回預約工作台 ↗</a>
+    </header>
+    <main>
+      <div class="intro">
+        <div>
+          <p class="eyebrow">EVALUATION / 評估證據</p>
+          <h1>預約有沒有做對，<br /><span>看資料與每一步。</span></h1>
+        </div>
+        <p class="intro-note">
+          GPT-5.6 Luna<br />8 個新案例 × 2 種策略<br /><span id="run-info"
+            >讀取已保存的結果…</span
+          >
+        </p>
+      </div>
+      <p id="load-error" class="notice error hidden" role="alert"></p>
+      <section
+        class="panel evidence-panel"
+        aria-labelledby="comparison-heading"
+      >
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">同一模型、工具與政策</span>
+            <h2 id="comparison-heading">策略比較</h2>
+          </div>
+          <span class="quiet-badge">已保存的評估 · 不呼叫 API</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <caption class="sr-only">
+              固定流程與單一 Agent 的同題比較
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">量測項目</th>
+                <th scope="col">固定流程＋LLM</th>
+                <th scope="col">單一 Agent</th>
+              </tr>
+            </thead>
+            <tbody id="comparison"></tbody>
+          </table>
+        </div>
+        <p class="evidence-note" id="usage"></p>
+      </section>
+      <aside class="failure-note" aria-labelledby="failure-heading">
+        <h2 id="failure-heading">拒絕得安全，仍可能沒有完成要求。</h2>
+        <p>
+          本輪唯一失敗：固定流程沒有越權修改，但未依題目要求以 JSON
+          回覆拒絕決策。資料庫正確與完整任務成功是不同指標。
+        </p>
+        <p>
+          只有 8 題，每題每策略一次。題目對受測 API
+          未見，作者則了解實作；這不是外部盲測，也不足以判定策略普遍優劣。
+        </p>
+      </aside>
+      <section class="panel evidence-panel" aria-labelledby="cases-heading">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">從任務看到原始證據</span>
+            <h2 id="cases-heading">逐案檢視</h2>
+          </div>
+          <label for="case-filter"
+            >顯示
+            <select id="case-filter">
+              <option value="all">全部任務</option>
+              <option value="failed">未通過任務</option>
+              <option value="fixed">固定流程</option>
+              <option value="agent">單一 Agent</option>
+            </select></label
+          >
+        </div>
+        <p id="case-count" class="evidence-note" aria-live="polite"></p>
+        <div id="case-list"></div>
+      </section>
+      <section class="panel evidence-panel" aria-labelledby="sources-heading">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">可下載、可查核</span>
+            <h2 id="sources-heading">原始紀錄</h2>
+          </div>
+        </div>
+        <nav class="artifact-links" aria-label="下載評估紀錄">
+          <a href="/api/evaluation/files/summary.json">指標摘要</a
+          ><a href="/api/evaluation/files/cases.json">逐案結果</a
+          ><a href="/api/evaluation/files/freeze.json">執行前凍結紀錄</a
+          ><a href="/api/evaluation/files/manifest.json">執行檔案雜湊</a
+          ><a href="/api/evaluation/files/usage-ledger.jsonl">API 用量紀錄</a>
+        </nav>
+        <p class="evidence-note">
+          先凍結題目、提示與判分，再執行一次。錯誤提案被撤回後也要判分；確認與故障恢復由確定性系統及合成使用者執行，不歸功於模型。
+        </p>
+      </section>
+    </main>
+    <footer>
+      <span>REPAIR DESK / LOCAL EVIDENCE</span
+      ><span>本機合成資料 · 原始失敗保留 · 無 LLM judge</span>
+    </footer>
+  </body>
+</html>

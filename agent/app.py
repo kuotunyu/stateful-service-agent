@@ -14,6 +14,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from agent import mock
 from agent.models import Proposal
 from agent.orchestration import ModelConfig, run_turn
+from agent.runtime import exclusive_server
 from agent.service import BookingService, Conflict, Forbidden
 
 
@@ -49,9 +50,10 @@ def create_app(database=None, demo_owner="demo-alice", model=None, enable_model=
 
     @asynccontextmanager
     async def lifespan(app):
-        service.recover()
-        service.recover_interrupted_messages()
-        yield
+        with exclusive_server(service.path):
+            service.recover()
+            service.recover_interrupted_messages()
+            yield
 
     app = FastAPI(title="Stateful Service Agent", lifespan=lifespan)
     app.state.service = service
@@ -109,6 +111,48 @@ def create_app(database=None, demo_owner="demo-alice", model=None, enable_model=
         result["model_name"] = ModelConfig().model
         result["model_usage"] = model.status() if hasattr(model, "status") else None
         return result
+
+    @app.get("/api/health")
+    def health():
+        from agent.launch import instance_id
+
+        with service.db.connect() as db:
+            db.execute("SELECT 1").fetchone()
+        return {
+            "app": "stateful-service-agent",
+            "instance": instance_id(),
+            "database": "ok",
+            "pid": os.getpid(),
+            "model_available": model is not None,
+            "model_name": ModelConfig().model,
+        }
+
+    evidence_dir = Path(__file__).resolve().parent.parent / "docs/evaluations/luna-holdout-01"
+    evidence_files = {
+        name: evidence_dir / name
+        for name in (
+            "summary.json",
+            "cases.json",
+            "manifest.json",
+            "freeze.json",
+            "usage-ledger.jsonl",
+        )
+    }
+
+    @app.get("/api/evaluation")
+    def evaluation():
+        return {
+            name.removesuffix(".json"): json.loads(evidence_files[name].read_text(encoding="utf-8"))
+            for name in ("summary.json", "cases.json", "manifest.json", "freeze.json")
+        }
+
+    @app.get("/api/evaluation/files/{name}")
+    def evidence_file(name: str):
+        if name not in evidence_files:
+            raise HTTPException(404, "Artifact not found")
+        return FileResponse(
+            evidence_files[name], filename=name, media_type="application/octet-stream"
+        )
 
     def replay(turn):
         if turn["response"]:
@@ -198,6 +242,10 @@ def create_app(database=None, demo_owner="demo-alice", model=None, enable_model=
     @app.get("/")
     def index():
         return FileResponse(static / "index.html")
+
+    @app.get("/evaluation")
+    def evaluation_page():
+        return FileResponse(static / "evaluation.html")
 
     return app
 

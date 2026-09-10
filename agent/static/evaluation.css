@@ -1,0 +1,112 @@
+.evidence-panel {
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.table-scroll {
+  overflow-x: auto;
+  padding: 0 24px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+th,
+td {
+  padding: 15px 12px;
+  border-bottom: 1px solid var(--line);
+}
+thead th {
+  color: var(--muted);
+  font-size: 13px;
+}
+tbody th {
+  font-weight: 500;
+}
+td {
+  font-variant-numeric: tabular-nums;
+}
+.evidence-note {
+  padding: 0 24px 18px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.failure-note {
+  background: var(--yellow);
+  border: 1px solid #dfca78;
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  margin: 24px 0;
+  line-height: 1.8;
+}
+.failure-note h2 {
+  font-size: 21px;
+  margin: 0;
+}
+.case {
+  border-top: 1px solid var(--line);
+}
+.case summary {
+  padding: 18px 24px;
+  cursor: pointer;
+  line-height: 1.8;
+}
+.case summary .status {
+  margin-left: 12px;
+}
+.case-body {
+  padding: 0 24px 24px;
+  line-height: 1.8;
+}
+.case-body h3 {
+  font-size: 15px;
+  margin-top: 24px;
+}
+.case-body pre {
+  background: var(--bg);
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.case-body p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.artifact-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  padding: 0 24px 24px;
+}
+.artifact-links a {
+  color: var(--blue);
+  text-underline-offset: 4px;
+}
+#case-filter {
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: white;
+}
+@media (max-width: 600px) {
+  .panel-heading {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  th,
+  td {
+    padding: 12px 7px;
+    font-size: 12px;
+  }
+  .table-scroll {
+    padding: 0 12px;
+  }
+  .intro-note {
+    margin-top: 16px;
+  }
+}
