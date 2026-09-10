@@ -4,9 +4,9 @@
 
 ## 看實際操作：19 秒
 
-[下載操作影片（WebM、無聲）](https://raw.githubusercontent.com/kuotunyu/stateful-service-agent/main/docs/demo/repair-desk-demo.webm)
+https://github.com/user-attachments/assets/6d0e3c4a-18ea-4cfc-9a2b-df5f93f2eb0b
 
-下載後開啟影片，留意三件事：
+按播放鍵觀看無聲影片，留意三件事：
 
 - **建立預約**：先看到確認單，按確認後才出現在目前預約。
 - **使用者反悔**：放棄尚未確認的操作，不會多出一筆預約。
@@ -16,7 +16,7 @@
 
 ## 看懂原因：52 秒
 
-[下載中文解說動畫（MP4、無聲字卡）](https://raw.githubusercontent.com/kuotunyu/stateful-service-agent/main/docs/demo/timeout-explainer/timeout-is-not-failure.mp4)
+https://github.com/user-attachments/assets/9d12baba-0e89-40e9-b9f0-33524349401d
 
 動畫解釋一個問題：**沒有收到成功回覆，為什麼不能直接再預約一次？** 因為資料可能已經保存，系統應先查原本的紀錄。這是原理解說，與上面的實際操作錄影不同。
 
