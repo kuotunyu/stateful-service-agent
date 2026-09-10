@@ -15,7 +15,7 @@ from agent import mock
 from agent.models import Proposal
 from agent.orchestration import ModelConfig, run_turn
 from agent.runtime import exclusive_server
-from agent.service import BookingService, Conflict, Forbidden
+from agent.service import BookingService, Conflict, Forbidden, SlotValidationError
 
 
 class Input(BaseModel):
@@ -210,10 +210,37 @@ def create_app(database=None, demo_owner="demo-alice", model=None, enable_model=
             elif decision["kind"] == "query":
                 count = len([b for b in snapshot["bookings"] if b["status"] == "active"])
                 result = {"text": f"你目前有 {count} 筆有效預約，詳細內容顯示在預約區。"}
+                if turn.get("previous") and turn["previous"]["status"] in (
+                    "draft",
+                    "waiting_confirmation",
+                    "executing",
+                ):
+                    result["text"] += (
+                        "先前待確認內容已被這則新訊息取代；只想查看安排，可按「查看目前預約」保留草案。"
+                    )
             else:
                 result = {
-                    "text": "這是 mock 示範，可輸入「預約冷氣維修，明天 10:00」、查詢、改期或取消。也可使用預約表單。"
+                    "text": decision.get(
+                        "text",
+                        "免費示範支援今天、明天、後天或 YYYY-MM-DD，時段為 10:00、14:00、16:00。可輸入「預約冷氣維修，明天 10:00」，或用表單選時間。目前尚未修改預約。",
+                    ),
+                    "show_form": True,
                 }
+        except SlotValidationError as exc:
+            result = {
+                "text": str(exc) + "目前尚未修改預約。",
+                "rejected": True,
+                "validation": {"code": exc.code, "field": exc.field},
+                "show_form": True,
+            }
+            try:
+                op = service.repair_slot_draft(session, turn["revision"], decision["proposal"], exc)
+                if op is not None:
+                    result["operation"] = op
+                    result["text"] += "已保留這次操作的項目與對象，請補上有效日期或時段。"
+            except (ValueError, Conflict, Forbidden):
+                # Recovery goes through the same policy; no second draft on failure.
+                pass
         except (ValueError, Conflict, Forbidden) as exc:
             result = {"text": str(exc), "rejected": True}
         return service.finish_turn(session, body.request_id, result)
@@ -234,6 +261,12 @@ def create_app(database=None, demo_owner="demo-alice", model=None, enable_model=
         try:
             op = service.propose(session, turn["revision"], raw)
             result = {"text": mock.describe(op), "operation": op}
+        except SlotValidationError as exc:
+            result = {
+                "text": str(exc) + "目前尚未修改預約。",
+                "rejected": True,
+                "validation": {"code": exc.code, "field": exc.field},
+            }
         except (ValueError, Conflict, Forbidden) as exc:
             result = {"text": str(exc), "rejected": True}
         result["mode"] = "form"

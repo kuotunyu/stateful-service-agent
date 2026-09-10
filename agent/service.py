@@ -23,6 +23,12 @@ class Forbidden(Exception):
     pass
 
 
+class SlotValidationError(ValueError):
+    def __init__(self, code, field, message):
+        super().__init__(message)
+        self.code, self.field = code, field
+
+
 def uid():
     return uuid.uuid4().hex
 
@@ -210,15 +216,43 @@ class BookingService:
         try:
             parsed = datetime.fromisoformat(slot)
         except (ValueError, TypeError):
-            raise ValueError("請指定完整日期與時段。") from None
+            raise SlotValidationError("invalid_slot", "slot", "請指定完整日期與時段。") from None
         if parsed.tzinfo is None:
-            raise ValueError("預約時間必須包含時區。")
+            raise SlotValidationError("invalid_slot", "slot", "預約時間必須包含時區。")
         parsed = parsed.astimezone(TAIPEI)
         if parsed.hour not in (10, 14, 16) or parsed.minute or parsed.second or parsed.microsecond:
-            raise ValueError("可預約時段為 10:00、14:00、16:00。")
+            raise SlotValidationError(
+                "unsupported_time", "time", "可預約時段為 10:00、14:00、16:00。"
+            )
         if parsed.timestamp() <= self.clock():
-            raise ValueError("預約時段必須在未來。")
+            raise SlotValidationError("past_slot", "date", "預約時段必須在未來。")
         return parsed.isoformat()
+
+    def repair_slot_draft(self, session, revision, raw, error):
+        """New incomplete draft only; never revive an old confirmation or bypass policy."""
+        payload = Proposal.model_validate(raw).model_dump()
+        if error.code not in ("unsupported_time", "past_slot") or payload["action"] not in (
+            "create",
+            "reschedule",
+        ):
+            return None
+        if payload["slot"]:
+            parsed = datetime.fromisoformat(payload["slot"])
+            if parsed.tzinfo is None:
+                return None
+            parsed = parsed.astimezone(TAIPEI)
+            if (payload["date"] and payload["date"] != parsed.date().isoformat()) or (
+                payload["time"] and payload["time"] != parsed.strftime("%H:%M")
+            ):
+                return None
+            payload["date"] = parsed.date().isoformat()
+        payload["slot"] = payload["time"] = None
+        today = datetime.fromtimestamp(self.clock(), TAIPEI).date()
+        if error.code == "past_slot" or (
+            payload["date"] and date.fromisoformat(payload["date"]) < today
+        ):
+            payload["date"] = None
+        return self.propose(session, revision, payload)
 
     def propose(self, session, revision, raw, *, observed_versions=None):
         try:
@@ -227,9 +261,14 @@ class BookingService:
             raise ValueError("操作欄位格式無效，請只提供支援的維修項目與預約資料。") from None
         payload = proposal.model_dump()
         if payload["date"]:
-            date.fromisoformat(payload["date"])
+            try:
+                date.fromisoformat(payload["date"])
+            except ValueError:
+                raise SlotValidationError("invalid_slot", "date", "請指定有效日期。") from None
         if payload["time"] and payload["time"] not in ("10:00", "14:00", "16:00"):
-            raise ValueError("可預約時段為 10:00、14:00、16:00。")
+            raise SlotValidationError(
+                "unsupported_time", "time", "可預約時段為 10:00、14:00、16:00。"
+            )
         if payload["date"] and payload["time"] and not payload["slot"]:
             payload["slot"] = f"{payload['date']}T{payload['time']}:00+08:00"
         with self.db.connect(write=True) as db:

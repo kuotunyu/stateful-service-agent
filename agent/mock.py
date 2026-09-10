@@ -12,6 +12,11 @@ def parse(text, previous, bookings, now):
         return {"kind": "abandon"}
     if any(word in text for word in ("查詢", "查看", "有哪些", "目前預約")):
         return {"kind": "query"}
+    if re.search(r"下[週周]|[週周]末|星期|禮拜|下個月", text):
+        return {
+            "kind": "help",
+            "text": "免費示範尚不支援這種日期說法。請用今天、明天、後天或 YYYY-MM-DD，或用表單選時間。目前尚未修改預約。",
+        }
     active = [b for b in bookings if b["status"] == "active"]
     pending = previous and previous["status"] in ("draft", "waiting_confirmation", "executing")
     payload = dict(previous["payload"]) if pending else {}
@@ -77,7 +82,7 @@ def parse(text, previous, bookings, now):
 
 def describe(op):
     if op["status"] == "waiting_confirmation":
-        return "操作內容已整理好。請檢查右側確認單，按下確認後才會修改預約。"
+        return "已整理好操作內容。請查看確認單；確認後才會修改預約。"
     missing = []
     payload = op["payload"]
     if op["action"] != "create" and not payload.get("booking_id"):
@@ -85,5 +90,5 @@ def describe(op):
     if op["action"] == "create" and not payload.get("service"):
         missing.append("維修項目：冷氣或洗衣機")
     if op["action"] != "cancel" and not payload.get("slot"):
-        missing.append("日期與時段，例如「明天 14:00」")
-    return "還需要「" + "、".join(missing) + "」。目前尚未修改預約。"
+        missing.append("日期與時段，例如：明天 14:00")
+    return "請補上" + "、".join(missing) + "。目前尚未修改預約。"
