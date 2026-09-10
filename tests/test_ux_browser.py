@@ -163,6 +163,7 @@ def test_next_step_focuses_confirmation_and_countdown_expires_without_submit(liv
         page.get_by_role("button", name="確認建立預約", exact=True).focus()
         page.clock.fast_forward(301_000)
         expect(page.locator("#confirmation-expiry")).to_contain_text("確認已過期")
+        expect(page.locator("#confirmation .status")).to_have_text("確認已過期")
         expect(page.locator("#confirmation-expiry")).to_be_focused()
         expect(page.locator("#result")).to_contain_text("確認已過期")
         expect(page.locator("#result")).not_to_contain_text("正在等待你的確認")
@@ -235,5 +236,26 @@ def test_server_expiry_rejection_overrides_local_countdown(live_server):
         expect(page.locator("#confirmation-expiry")).to_have_text("確認已過期，預約尚未修改")
         expect(page.get_by_role("button", name="確認建立預約", exact=True)).to_have_count(0)
         expect(page.get_by_role("button", name="重新填寫", exact=True)).to_be_visible()
+        assert db_bookings(live_server) == []
+        browser.close()
+
+
+def test_message_waits_for_initial_state_before_sending(live_server):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        held = []
+        errors = []
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.route("**/api/state", lambda route: held.append(route), times=1)
+        page.goto(live_server["url"])
+        page.locator("#message").fill("預約冷氣維修 2030-01-08 10:00")
+        page.locator("#send").click()
+        expect(page.locator("#send")).to_be_disabled()
+        assert held
+        assert not errors
+        held[0].continue_()
+        expect(page.get_by_role("button", name="確認建立預約", exact=True)).to_be_visible()
+        assert not errors
         assert db_bookings(live_server) == []
         browser.close()

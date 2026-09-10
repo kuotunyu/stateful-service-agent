@@ -3,6 +3,7 @@ const $ = (id) => document.getElementById(id);
 const labels = {
   draft: "操作草案",
   waiting_confirmation: "等待確認",
+  expired: "確認已過期",
   executing: "執行中／待查證",
   committed: "已提交",
   failed: "失敗",
@@ -294,7 +295,7 @@ function renderConfirmation() {
   body.dataset.operationId = op.id;
   body.append(
     node("div", actions[op.action], "ticket-action"),
-    badge(op.status),
+    badge(confirmationExpired(op) && uncertainOperationId !== op.id ? "expired" : op.status),
   );
   const dl = node("dl", undefined, "ticket-data");
   const booking =
@@ -712,10 +713,13 @@ async function sendPending() {
   const seq = ++sendSequence;
   sending = true;
   $("send").disabled = true;
-  renderConfirmation();
-  renderModel();
   clearNotice();
   try {
+    if (!state) await initialLoad;
+    if (!state) await refresh();
+    if (seq !== sendSequence) return;
+    renderConfirmation();
+    renderModel();
     const result = await api(request.path, request.body);
     if (seq !== sendSequence) return;
     pendingRequest = null;
@@ -743,8 +747,10 @@ async function sendPending() {
     if (seq === sendSequence) {
       sending = false;
       $("send").disabled = false;
-      renderConfirmation();
-      renderModel();
+      if (state) {
+        renderConfirmation();
+        renderModel();
+      }
     }
   }
 }
@@ -900,4 +906,4 @@ function updateDateControls() {
 }
 for (const id of ["date", "time"])
   $(id).addEventListener("focus", updateDateControls);
-refresh().catch((e) => notice("無法載入工作台：" + e.message, true));
+const initialLoad = refresh().catch((e) => notice("無法載入工作台：" + e.message, true));
