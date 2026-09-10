@@ -4,9 +4,74 @@ import re
 
 import pytest
 from playwright.sync_api import expect, sync_playwright
-from test_browser import send
+from test_browser import db_bookings, send
 
 pytest_plugins = ["test_browser"]
+
+
+def tab_to(page, target):
+    """Reach controls through the real tab order, without scripted focus or clicks."""
+    expect(target).to_be_visible()
+    for _ in range(60):
+        if target.evaluate("element => element === document.activeElement"):
+            return
+        page.keyboard.press("Tab")
+    raise AssertionError("Control was not reachable within one keyboard journey")
+
+
+def test_keyboard_booking_journey_requires_confirmation(live_server):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        errors = []
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.goto(live_server["url"])
+        expect(page.locator(".welcome")).to_be_visible()
+
+        def activate(name):
+            tab_to(page, page.get_by_role("button", name=name, exact=True))
+            page.keyboard.press("Enter")
+
+        def propose(text, action):
+            tab_to(page, page.get_by_role("textbox", name="你的訊息", exact=True))
+            page.keyboard.insert_text(text)
+            page.keyboard.press("Enter")
+            expect(page.get_by_role("button", name="確認" + action, exact=True)).to_be_visible()
+            activate("已準備好，查看確認單")
+            expect(page.locator("#confirmation-heading")).to_be_focused()
+
+        activate("查看目前預約")
+        expect(page.locator("#notice-text")).to_contain_text("目前有 0 筆")
+        propose("預約冷氣維修 2030-01-08 10:00", "建立預約")
+        assert db_bookings(live_server) == []
+        activate("放棄這次操作")
+        expect(page.locator("#result")).to_contain_text("取消")
+        assert db_bookings(live_server) == []
+
+        propose("預約冷氣維修 2030-01-08 10:00", "建立預約")
+        assert db_bookings(live_server) == []
+        activate("確認建立預約")
+        expect(page.locator("#booking-count")).to_have_text("1")
+        original = db_bookings(live_server)
+        assert len(original) == 1 and original[0]["version"] == 1
+
+        propose("改成 2030-01-09 14:00", "改期預約")
+        assert db_bookings(live_server) == original
+        activate("確認改期預約")
+        expect(page.locator("#bookings")).to_contain_text("2030/01/09")
+        changed = db_bookings(live_server)
+        assert len(changed) == 1 and changed[0]["version"] == 2
+        assert changed[0]["slot"] == "2030-01-09T14:00:00+08:00"
+
+        propose("取消預約", "取消預約")
+        assert db_bookings(live_server) == changed
+        activate("確認取消預約")
+        expect(page.locator("#booking-count")).to_have_text("0")
+        cancelled = db_bookings(live_server)
+        assert len(cancelled) == 1 and cancelled[0]["status"] == "cancelled"
+        assert cancelled[0]["version"] == 3
+        assert not errors
+        browser.close()
 
 
 def contrast(first, second):
