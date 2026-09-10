@@ -1,13 +1,49 @@
-# Repair Desk 操作展示
+# 看懂維修預約流程
 
-[逾時不等於失敗：52 秒 Manim 中文解說](timeout-explainer/README.md)。適合先看設計原理，再搭配下方實際操作錄影；動畫引用既有 SQLite 檢查點，沒有把示意圖當作新的測試證據。
+這個作品讓你用對話安排維修。系統先列出確認單，你確認後才保存；反悔或遇到逾時時，也能核對預約到底有沒有改變。
 
-[播放 19 秒無聲操作錄影](repair-desk-demo.webm)。這是實際瀏覽器錄製的免費 Mock 展示，不是模型能力證據；可以暫停查看確認單與收據。
+## 看實際操作：19 秒
 
-依序展示：預覽尚未寫入 → 明確確認後建立 → 反悔沒有新增 → 注入提交後回覆遺失並查證 → 注入提交前逾時 → 真正停止／重啟獨立測試 server 後恢復。
+[下載操作影片（WebM、無聲）](https://raw.githubusercontent.com/kuotunyu/stateful-service-agent/main/docs/demo/repair-desk-demo.webm)
 
-[六個檢查點的 SQLite 查詢結果](checkpoints.json)：預約筆數依序為 **0、1、1、2、2、3**，最後三筆均為版本 1。正常預約／反悔／恢復均有資料庫斷言，錄影不以畫面文字自行判定成功。
+下載後開啟影片，留意三件事：
 
-重製命令：`uv run --no-env-file python scripts/record_demo.py`。僅啟停臨時測試程序，不碰 8765／8766、不呼叫 API。輸出在 `artifacts/demo-2026-09-10/`；為保留證據，該目錄存在時拒絕覆寫。
+- **建立預約**：先看到確認單，按確認後才出現在目前預約。
+- **使用者反悔**：放棄尚未確認的操作，不會多出一筆預約。
+- **模擬故障**：回覆遺失或服務重啟後，查回真正的結果，避免重複建立。
 
-面試講解可聚焦三件事：模型僅能提議；授權、版本與交易由確定性程式控制；回覆未知時先查提交收據，避免重複效果。更完整的五分鐘操作步驟見 [操作指南](../guide.md#五分鐘展示)。
+這是免費示範模式的實際操作錄影，不是與真實模型對話的錄影。
+
+## 看懂原因：52 秒
+
+[下載中文解說動畫（MP4、無聲字卡）](https://raw.githubusercontent.com/kuotunyu/stateful-service-agent/main/docs/demo/timeout-explainer/timeout-is-not-failure.mp4)
+
+動畫解釋一個問題：**沒有收到成功回覆，為什麼不能直接再預約一次？** 因為資料可能已經保存，系統應先查原本的紀錄。這是原理解說，與上面的實際操作錄影不同。
+
+<details>
+<summary>給工程讀者：資料庫證據與重製方式</summary>
+
+[六個 SQLite 檢查點](checkpoints.json)記錄的預約筆數依序為 **0、1、1、2、2、3**：
+
+| 檢查點 | 預約筆數 |
+|---|---|
+| 預覽，尚未確認 | 0 |
+| 確認建立 | 1 |
+| 另一筆草案反悔 | 1 |
+| 提交後回覆遺失，再查證 | 2 |
+| 提交前逾時 | 2 |
+| 重啟後恢復 | 3 |
+
+最後三筆均為版本 1。測試直接查詢資料庫，不只依畫面文字判定成功。
+
+從專案根目錄重製錄影：
+
+```powershell
+uv run --no-env-file python scripts/record_demo.py
+```
+
+僅啟停臨時測試程序，不呼叫 API。輸出在 `artifacts/demo-2026-09-10/`；目錄存在時拒絕覆寫。
+
+動畫文字稿、來源與重製方式見 [動畫說明](timeout-explainer/README.md)。
+
+</details>
