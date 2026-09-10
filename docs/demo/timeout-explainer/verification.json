@@ -1,0 +1,37 @@
+{
+  "manim": "0.21.0",
+  "python": "3.12.13",
+  "renderer": "cairo",
+  "font": "Microsoft JhengHei",
+  "width": 1280,
+  "height": 720,
+  "fps": 30,
+  "frames": 1557,
+  "duration_seconds": 51.9,
+  "audio_streams": 0,
+  "video_sha256": "742f414b1b6b28d3ac4475162e12a73e79b4c8091bc694caaeaa2b0c33877d79",
+  "scene_sha256": "e23bc6f366e085035d9cfe352c5361d33720051bfafd752beaf128c829652f44",
+  "evidence": {
+    "source": "docs/demo/checkpoints.json",
+    "sha256": "2060686f9395f781d8f03e41e1a95483b5769677e52e7ce1cff1c4c3937bb72f",
+    "before_count": 1,
+    "after_count": 2,
+    "added": {
+      "id": "4f12fff3870f49c18e17bd4b1f0c0c79",
+      "owner": "demo-alice",
+      "service": "洗衣機維修",
+      "slot": "2030-04-02T14:00:00+08:00",
+      "status": "active",
+      "version": 1
+    }
+  },
+  "sample_times_seconds": [
+    3,
+    10,
+    19,
+    28,
+    36,
+    46
+  ],
+  "visual_review": "Reviewed contact sheet at 3, 10, 19, 28, 36 and 46 seconds: Chinese text readable, no chapter remnants or clipped labels. Sample review, not a full frame-by-frame visual audit."
+}
