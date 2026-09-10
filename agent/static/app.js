@@ -109,7 +109,7 @@ function renderModel() {
   $("mode-badge").textContent = modeNames[$("mode").value];
   const usage = state.model_usage;
   $("model-usage").textContent = usage
-    ? `gpt-4.1-mini · 累計 ${usage.requests}/${usage.max_requests} 次（含評估）。已知用量 USD ${usage.actual_usd.toFixed(5)}；保守預留 ${usage.reserved_usd.toFixed(4)}/${usage.budget_usd.toFixed(2)}。${usage.unknown_requests} 次用量待查證。`
+    ? `${state.model_name} · 累計 ${usage.requests}/${usage.max_requests} 次（含評估）。已知用量 USD ${usage.actual_usd.toFixed(5)}；保守預留 ${usage.reserved_usd.toFixed(4)}/${usage.budget_usd.toFixed(2)}。${usage.unknown_requests} 次用量待查證。`
     : state.model_available
       ? "模型已連接。所有操作仍需你確認。"
       : "真實模型未啟用；Mock 與表單可直接使用。";

@@ -28,7 +28,7 @@ uv run --env-file .env python -m uvicorn agent.app:create_live_app --factory --h
 ```
 
 介面仍先選 Mock；在「對話方式」選真實模型才會發送付費請求。兩個策略使用同一
-`gpt-4.1-mini-2025-04-14` 設定；模型只能提出草案，所有寫入仍由確認單授權。
+`gpt-5.6-luna` 設定（reasoning_effort=none、temperature=0、最多 500 output tokens）；模型只能提出草案，所有寫入仍由確認單授權。
 等待模型時可按「停止這次處理」，再送新需求。已送出的 API 呼叫無法保證免計費，
 但遲到回覆會失效，尚未送出的後續步驟會停止。
 
@@ -40,6 +40,11 @@ uv run --env-file .env python -m uvicorn agent.app:create_live_app --factory --h
 
 真實介面整合已驗證建立、改期、取消及查詢，新增 5 次 API、USD 0.0016772；
 截至該次驗證累計 38 次、USD 0.0117524。見 [整合驗證紀錄](docs/evaluations/live-smoke-01/report.md)。
+
+目前預設模型已依使用者要求改為 **GPT-5.6 Luna**。Luna 遷移另用 6 次 API、USD 0.0013088，
+包含一筆被正確攔下的時間格式錯誤及修正後四個成功流程；累計 44 次、USD 0.0130612。
+見 [Luna 遷移驗證](docs/evaluations/luna-migration-01/report.md)。歷史 4.1-mini 評估保留，不能算成 Luna 的能力證據。
+目前任務狀態與未完成項目見 [專案進度](docs/status.md)。
 
 ## 五分鐘展示
 
@@ -114,6 +119,7 @@ uv run python -m evals.run --output artifacts/my-mock-run
 [官方模型與價格](https://developers.openai.com/api/docs/models/gpt-4.1-mini)。
 
 首輪已取得 USD 1 授權並完成，沒有超出上限。後續重跑會另外產生費用，需計入既有授權總額。
+以下指令是首輪當時版本的紀錄；目前評估程式預設也已改為 Luna，不能用新版本指令重現舊模型設定。
 本專案支援使用者指定的 `.env`；金鑰欄位為 `STATEFUL_OPENAI_API_KEY`，範例見 `.env.example`。
 只有明確執行付費命令才會載入 `.env`；預設網頁不會讀取金鑰。首輪啟動方式如下；
 該目錄與 ledger 現已存在，重複執行會被拒絕，不會重置首輪預算：

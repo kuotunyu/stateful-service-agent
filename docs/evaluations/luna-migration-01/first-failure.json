@@ -1,0 +1,28 @@
+{
+  "messages": [
+    {
+      "text": "我要預約冷氣維修，明天 10:00",
+      "response": {
+        "text": "請指定完整日期與時段。",
+        "rejected": true,
+        "mode": "fixed",
+        "trace": [
+          {
+            "tool": "propose",
+            "arguments": {
+              "action": "create",
+              "service": "冷氣維修",
+              "slot": "10:00",
+              "booking_id": null,
+              "date": "2026-09-11",
+              "time": "10:00"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "booking_count": 0,
+  "status": "rejected_invalid_slot",
+  "prompt_change": "add explicit full ISO datetime description to Proposal.slot"
+}

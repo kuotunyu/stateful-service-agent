@@ -4,6 +4,7 @@ import json
 import os
 import time
 from pathlib import Path
+from typing import ClassVar
 
 import httpx
 
@@ -15,10 +16,12 @@ class BudgetExceeded(RuntimeError):
 
 
 class OpenAIModel:
-    # Official standard text rates checked 2026-09-10, USD per token.
-    INPUT_RATE = 0.40 / 1_000_000
-    CACHED_INPUT_RATE = 0.10 / 1_000_000
-    OUTPUT_RATE = 1.60 / 1_000_000
+    # Official standard short-context rates checked 2026-09-10, USD / 1M tokens:
+    # ordinary input, cache read, cache write, output. Historical baseline retained.
+    RATES: ClassVar[dict[str, tuple[float, float, float, float]]] = {
+        "gpt-4.1-mini-2025-04-14": (0.40, 0.10, 0.40, 1.60),
+        "gpt-5.6-luna": (0.20, 0.02, 0.25, 1.20),
+    }
 
     def __init__(
         self, api_key, ledger, *, authorized=False, budget_usd=1.0, max_requests=144, transport=None
@@ -50,15 +53,20 @@ class OpenAIModel:
 
     @classmethod
     def reservation(cls, messages, config):
-        if config.model != "gpt-4.1-mini-2025-04-14" or config.max_output_tokens > 500:
-            raise ValueError(
-                "Pilot pricing is only approved for the configured snapshot and output cap"
-            )
+        if config.model not in cls.RATES or not 1 <= config.max_output_tokens <= 500:
+            raise ValueError("Pricing is only approved for configured models and the output cap")
+        if config.model == "gpt-5.6-luna" and config.reasoning_effort != "none":
+            raise ValueError("This migration preserves reasoning_effort=none")
         # For text-only messages, UTF-8 byte count plus generous message overhead
         # conservatively reserves token cost before dispatch. Unknown replies keep
         # their full reservation; there is no automatic transport retry.
         input_ceiling = len(json.dumps(messages, ensure_ascii=False).encode("utf-8")) + 2048
-        return input_ceiling * cls.INPUT_RATE + config.max_output_tokens * cls.OUTPUT_RATE
+        if input_ceiling > 272000:
+            raise ValueError("Local demo context limit exceeded; long-context pricing not enabled")
+        normal, cached, write, output = cls.RATES[config.model]
+        return (
+            input_ceiling * max(normal, cached, write) + config.max_output_tokens * output
+        ) / 1e6
 
     def respond(self, messages, config):
         reserve = self.reservation(messages, config)
@@ -72,6 +80,10 @@ class OpenAIModel:
                 "state": "reserved",
                 "reserved_usd": reserve,
                 "cumulative_reserved_usd": self.reserved_usd,
+                "model": config.model,
+                "reasoning_effort": config.reasoning_effort
+                if config.model == "gpt-5.6-luna"
+                else None,
             }
         )
         try:
@@ -87,6 +99,11 @@ class OpenAIModel:
                         "response_format": {"type": "json_object"},
                         "store": False,
                         "service_tier": "default",
+                        **(
+                            {"reasoning_effort": config.reasoning_effort}
+                            if config.model == "gpt-5.6-luna"
+                            else {}
+                        ),
                     },
                 )
                 response.raise_for_status()
@@ -106,12 +123,16 @@ class OpenAIModel:
         if "prompt_tokens" in usage and "completion_tokens" in usage:
             self.input_tokens += usage["prompt_tokens"]
             self.output_tokens += usage["completion_tokens"]
-            cached = usage.get("prompt_tokens_details", {}).get("cached_tokens", 0)
+            details = usage.get("prompt_tokens_details", {})
+            cached = details.get("cached_tokens", 0)
+            writes = details.get("cache_write_tokens", 0)
+            normal_rate, cache_rate, write_rate, output_rate = self.RATES[config.model]
             cost = (
-                (usage["prompt_tokens"] - cached) * self.INPUT_RATE
-                + cached * self.CACHED_INPUT_RATE
-                + usage["completion_tokens"] * self.OUTPUT_RATE
-            )
+                (usage["prompt_tokens"] - cached - writes) * normal_rate
+                + cached * cache_rate
+                + writes * write_rate
+                + usage["completion_tokens"] * output_rate
+            ) / 1e6
             self.actual_usd += cost
             self._record(
                 {
@@ -120,6 +141,8 @@ class OpenAIModel:
                     "usage": usage,
                     "actual_usd": cost,
                     "response_id": data.get("id"),
+                    "response_model": data.get("model"),
+                    "service_tier": data.get("service_tier"),
                 }
             )
             if cost > reserve:

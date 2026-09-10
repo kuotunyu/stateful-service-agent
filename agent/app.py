@@ -109,6 +109,7 @@ def create_app(database=None, demo_owner="demo-alice", model=None, enable_model=
         result = service.snapshot(session_id)
         result["mode"] = "mock"
         result["model_available"] = model is not None
+        result["model_name"] = ModelConfig().model
         result["model_usage"] = model.status() if hasattr(model, "status") else None
         return result
 

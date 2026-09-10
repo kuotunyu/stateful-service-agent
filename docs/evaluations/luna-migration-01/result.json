@@ -1,0 +1,131 @@
+{
+  "cases": [
+    {
+      "mode": "fixed",
+      "text": "我要預約冷氣維修，明天 10:00",
+      "reply": "操作內容已整理好。請檢查右側確認單，按下確認後才會修改預約。",
+      "trace": [
+        {
+          "tool": "propose",
+          "arguments": {
+            "action": "create",
+            "service": "冷氣維修",
+            "slot": "2026-09-11T10:00:00+08:00",
+            "booking_id": null,
+            "date": "2026-09-11",
+            "time": "10:00"
+          }
+        }
+      ],
+      "bookings": [
+        {
+          "id": "553b014000ff4b178d329af699676dd3",
+          "owner": "demo-alice",
+          "service": "冷氣維修",
+          "slot": "2026-09-11T10:00:00+08:00",
+          "status": "active",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "mode": "fixed",
+      "text": "把我的預約改成後天 14:00",
+      "reply": "操作內容已整理好。請檢查右側確認單，按下確認後才會修改預約。",
+      "trace": [
+        {
+          "tool": "propose",
+          "arguments": {
+            "action": "reschedule",
+            "service": "冷氣維修",
+            "slot": "2026-09-12T14:00:00+08:00",
+            "booking_id": "553b014000ff4b178d329af699676dd3"
+          }
+        }
+      ],
+      "bookings": [
+        {
+          "id": "553b014000ff4b178d329af699676dd3",
+          "owner": "demo-alice",
+          "service": "冷氣維修",
+          "slot": "2026-09-12T14:00:00+08:00",
+          "status": "active",
+          "version": 2
+        }
+      ]
+    },
+    {
+      "mode": "fixed",
+      "text": "請取消我的預約",
+      "reply": "操作內容已整理好。請檢查右側確認單，按下確認後才會修改預約。",
+      "trace": [
+        {
+          "tool": "propose",
+          "arguments": {
+            "action": "cancel",
+            "service": "冷氣維修",
+            "slot": "2026-09-12T14:00:00+08:00",
+            "booking_id": "553b014000ff4b178d329af699676dd3",
+            "date": null,
+            "time": null
+          }
+        }
+      ],
+      "bookings": [
+        {
+          "id": "553b014000ff4b178d329af699676dd3",
+          "owner": "demo-alice",
+          "service": "冷氣維修",
+          "slot": "2026-09-12T14:00:00+08:00",
+          "status": "cancelled",
+          "version": 3
+        }
+      ]
+    },
+    {
+      "mode": "agent",
+      "text": "查詢我的預約，包含已取消的預約與日期時間",
+      "reply": "您的預約（包含已取消）：\n- 預約編號：553b014000ff4b178d329af699676dd3\n  服務：冷氣維修\n  日期時間：2026年9月12日 14:00（UTC+8）\n  狀態：已取消",
+      "trace": [
+        {
+          "tool": "read_context",
+          "arguments": {}
+        },
+        {
+          "tool": "finish",
+          "arguments": {
+            "text": "您的預約（包含已取消）：\n- 預約編號：553b014000ff4b178d329af699676dd3\n  服務：冷氣維修\n  日期時間：2026年9月12日 14:00（UTC+8）\n  狀態：已取消"
+          }
+        }
+      ],
+      "bookings": [
+        {
+          "id": "553b014000ff4b178d329af699676dd3",
+          "owner": "demo-alice",
+          "service": "冷氣維修",
+          "slot": "2026-09-12T14:00:00+08:00",
+          "status": "cancelled",
+          "version": 3
+        }
+      ]
+    }
+  ],
+  "usage_before": {
+    "requests": 39,
+    "reserved_usd": 0.10550715000000001,
+    "actual_usd": 0.011948,
+    "unknown_requests": 0,
+    "blocked": false,
+    "budget_usd": 1.0,
+    "max_requests": 144
+  },
+  "usage_after": {
+    "requests": 44,
+    "reserved_usd": 0.1149479,
+    "actual_usd": 0.0130612,
+    "unknown_requests": 0,
+    "blocked": false,
+    "budget_usd": 1.0,
+    "max_requests": 144
+  }
+}

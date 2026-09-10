@@ -14,9 +14,10 @@ from agent.service import TAIPEI, Conflict, Forbidden
 
 @dataclass(frozen=True)
 class ModelConfig:
-    model: str = "gpt-4.1-mini-2025-04-14"
+    model: str = "gpt-5.6-luna"
     temperature: float = 0
     max_output_tokens: int = 500
+    reasoning_effort: str = "none"
 
 
 class Decision(BaseModel):

@@ -61,7 +61,9 @@ def test_adapter_validates_response_and_records_usage_without_secrets(tmp_path):
         authorized=True,
         transport=httpx.MockTransport(answer),
     )
-    result = model.respond([{"role": "user", "content": "查詢"}], ModelConfig())
+    result = model.respond(
+        [{"role": "user", "content": "查詢"}], ModelConfig(model="gpt-4.1-mini-2025-04-14")
+    )
     assert result["arguments"]["text"] == "查詢完成"
     assert model.actual_usd == pytest.approx(0.000072)
 
@@ -122,5 +124,7 @@ def test_cached_input_uses_cached_rate_in_reported_cost(tmp_path):
             )
         ),
     )
-    model.respond([{"role": "user", "content": "查詢"}], ModelConfig())
+    model.respond(
+        [{"role": "user", "content": "查詢"}], ModelConfig(model="gpt-4.1-mini-2025-04-14")
+    )
     assert model.actual_usd == pytest.approx(0.000192)
