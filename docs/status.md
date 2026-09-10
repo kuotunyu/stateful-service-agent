@@ -39,3 +39,5 @@
 目前架構刻意限制在單一 server process、合成使用者與本機 SQLite。真實登入、多人正式服務、付款／通知／行事曆、GPU、多 Agent 平台不屬於本次交付範圍。
 
 展示入口已改為 GitHub 內嵌播放器：19 秒操作影片與可展開的 52 秒原理解說。兩段附件以未登入 GET 請求確認回傳 200／video/mp4。首次使用指南補上下載、uv 安裝入口及本機網址說明。最新完整 [Windows CI：131 passed](https://github.com/kuotunyu/stateful-service-agent/actions/runs/34519141883)，較早段落中的測試數是當時紀錄。
+
+乾淨副本補驗：從 Git 已追蹤來源匯出，不帶 .env、既有資料庫或虛擬環境，在 Windows／Python 3.12 重新安裝鎖定依賴。工作台與評估頁正常，預覽不寫入預約，重複確認只有一次效果，啟動器可識別該服務；測試程序已停止，零付費 API。此為 HTTP／SQLite 啟動驗證，不代表新一輪瀏覽器或模型能力評估；見 [驗證摘要與來源版本](clean-start-verification.json)。

@@ -1,0 +1,12 @@
+{
+  "source_commit": "ba7484537e36970d05723f21ba9fc12f2cb19105",
+  "python": "3.12",
+  "environment": "Windows isolated git archive; no project .env or existing database",
+  "checks": [
+    "fresh_source_pages_and_saved_evaluation_load_without_credentials",
+    "preview_does_not_write_booking_and_duplicate_confirmation_has_one_effect",
+    "launcher_identifies_clean_server"
+  ],
+  "paid_api_calls": 0,
+  "own_server_stopped": true
+}
