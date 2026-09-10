@@ -1,6 +1,10 @@
 # 逾時不等於失敗
 
-[播放 52 秒中文解說動畫](timeout-is-not-failure.mp4) · [實際操作錄影](../repair-desk-demo.webm) · [SQLite 檢查點](../checkpoints.json)
+按下方播放鍵觀看 52 秒中文解說（無聲字卡）。
+
+https://github.com/user-attachments/assets/9d12baba-0e89-40e9-b9f0-33524349401d
+
+[實際操作錄影](../README.md) · [SQLite 檢查點](../checkpoints.json)
 
 這是使用 Manim Community 製作的無聲流程解說，中文字卡已直接放入畫面。它解釋本專案的交易與查證邊界，不是介面錄影，也不是新增的模型評估或端到端測試。
 

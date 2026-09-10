@@ -4,7 +4,23 @@
 可查詢、建立、改期與取消；模型只能提議，資料庫寫入需要使用者確認。
 所有資料皆為本機合成資料，不連接真實客戶、付款、通知或行事曆。
 
-## 啟動
+## 第一次使用
+
+先安裝 [uv](https://docs.astral.sh/uv/getting-started/installation/)。它負責準備 Python 與專案依賴。
+
+從 GitHub 專案頁選 **Code → Download ZIP**，解壓縮後雙擊 `start.cmd`。第一次啟動需要網路下載依賴；預設免費示範模式不需要 `.env` 或 API key。
+
+如果已安裝 Git，也可以在 PowerShell 執行：
+
+```powershell
+git clone https://github.com/kuotunyu/stateful-service-agent.git
+cd stateful-service-agent
+.\start.cmd
+```
+
+瀏覽器中的 `127.0.0.1` 代表你自己的電腦，必須先啟動程式才能開啟，不是公開試用網站。
+
+## 日常啟動與模型模式
 
 Windows 已安裝 `uv` 後，在專案目錄執行，或雙擊 `start.cmd`：
 
