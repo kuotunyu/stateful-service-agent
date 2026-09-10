@@ -770,3 +770,21 @@ footer {
     scroll-behavior: auto !important;
   }
 }
+/* Model choice remains beside the conversation, separate from approval. */
+.model-controls {
+  padding: 0 24px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.model-controls select {
+  width: auto;
+  max-width: 100%;
+}
+.model-controls p {
+  flex-basis: 100%;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+}

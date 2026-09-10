@@ -19,7 +19,7 @@ def live_server(tmp_path):
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
-    env = {**os.environ, "STATEFUL_DB": str(tmp_path / "browser.db")}
+    env = {**os.environ, "STATEFUL_DB": str(tmp_path / "browser.db"), "STATEFUL_ENABLE_MODEL": "0"}
     process = None
     url = f"http://127.0.0.1:{port}"
 

@@ -47,3 +47,12 @@ timeline. Palette: ink #17324d, background #edf3f8, paper #ffffff, blue #126c9c,
 yellow #fff0b3, muted #536a7e. Segoe UI/Microsoft JhengHei body, Bahnschrift display,
 Consolas IDs. Desktop: conversation left, booking and confirmation right; narrow screens stack.
 The receipt is the visual signature and carries real operation status, not decorative metrics.
+
+## Local model integration (2026-09-10)
+
+- [x] Explicit live factory and per-message mock/fixed/agent choice; model proposals use the same confirmation boundary.
+- [x] SQLite allowance reserves before network dispatch, includes the original pilot, and survives concurrent calls and restarts.
+- [x] Interrupt request tombstones reject late arrival; intent revisions reject late model output; UI discards superseded HTTP delivery.
+- [x] Fake-model browser checks cover timeout/replay and historical mode labels. Real API smoke covers CRUD/query with independent DB checks; see `evaluations/live-smoke-01/report.md`.
+
+The local app remains single-process. No background broker, GPU, remote repository, or external business integration is required.

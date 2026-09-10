@@ -19,7 +19,14 @@ let state,
   pendingRequest = null,
   sending = false,
   confirming = false,
+  sendSequence = 0,
   refreshSequence = 0;
+const modeNames = {
+  mock: "MOCK",
+  fixed: "固定流程 + LLM",
+  agent: "單一 Agent",
+  form: "表單",
+};
 function node(tag, text, className) {
   const el = document.createElement(tag);
   if (text !== undefined) el.textContent = text;
@@ -89,10 +96,49 @@ async function refresh() {
 }
 function render() {
   $("identity").textContent = "示範使用者 / " + state.identity;
+  renderModel();
   renderMessages();
   renderConfirmation();
   renderBookings();
   renderEvents();
+}
+function renderModel() {
+  for (const option of $("mode").options)
+    option.disabled = option.value !== "mock" && !state.model_available;
+  $("mode").disabled = sending;
+  $("mode-badge").textContent = modeNames[$("mode").value];
+  const usage = state.model_usage;
+  $("model-usage").textContent = usage
+    ? `gpt-4.1-mini · 累計 ${usage.requests}/${usage.max_requests} 次（含評估）。已知用量 USD ${usage.actual_usd.toFixed(5)}；保守預留 ${usage.reserved_usd.toFixed(4)}/${usage.budget_usd.toFixed(2)}。${usage.unknown_requests} 次用量待查證。`
+    : state.model_available
+      ? "模型已連接。所有操作仍需你確認。"
+      : "真實模型未啟用；Mock 與表單可直接使用。";
+  $("interrupt").classList.toggle("hidden", !interruptTarget());
+}
+function interruptTarget() {
+  return pendingRequest?.path === "/api/messages"
+    ? pendingRequest.body.request_id
+    : state?.messages.findLast((message) => !message.response)?.request_id;
+}
+async function interruptMessage() {
+  const target = interruptTarget();
+  if (!target) return;
+  $("interrupt").disabled = true;
+  try {
+    const result = await api(
+      `/api/messages/${encodeURIComponent(target)}/interrupt`,
+      {},
+    );
+    ++sendSequence;
+    pendingRequest = null;
+    sending = false;
+    $("send").disabled = false;
+    clearNotice();
+    notice(result.text);
+    await refresh();
+  } finally {
+    $("interrupt").disabled = false;
+  }
 }
 function renderMessages() {
   const list = $("messages");
@@ -105,7 +151,7 @@ function renderMessages() {
       node("div", "↳", "welcome-symbol"),
       node("h3", "今天需要安排什麼維修？"),
       node("p", "告訴我維修項目與時間。你可以隨時更改想法，準備好後再確認。"),
-      node("p", "這裡使用固定句型的 mock，不會聯絡真實維修人員。"),
+      node("p", "可選 Mock 範例句型或已啟用的真實模型；所有資料都是模擬預約。"),
     );
     list.append(welcome);
     return;
@@ -129,7 +175,20 @@ function renderMessages() {
     ]) {
       const entry = node("div", undefined, "chat-entry " + speaker);
       entry.append(
-        node("span", speaker === "user" ? "你" : "預約助手 · MOCK", "speaker"),
+        node(
+          "span",
+          speaker === "user"
+            ? "你"
+            : "預約助手 · " +
+                (message.response?.superseded
+                  ? "已被新訊息取代"
+                  : message.response?.interrupted
+                    ? "已中斷"
+                    : !message.response
+                      ? "處理中"
+                      : modeNames[message.response?.mode || "mock"]),
+          "speaker",
+        ),
         node("div", text, "bubble"),
       );
       list.append(entry);
@@ -308,11 +367,12 @@ async function sendMessage(text) {
   if (sending) return;
   if (
     pendingRequest?.path !== "/api/messages" ||
-    pendingRequest.body.text !== text
+    pendingRequest.body.text !== text ||
+    pendingRequest.body.mode !== $("mode").value
   )
     pendingRequest = {
       path: "/api/messages",
-      body: { request_id: crypto.randomUUID(), text },
+      body: { request_id: crypto.randomUUID(), text, mode: $("mode").value },
     };
   await sendPending();
 }
@@ -331,17 +391,21 @@ async function submitProposal(proposal) {
 async function sendPending() {
   if (sending || !pendingRequest) return;
   const request = pendingRequest;
+  const seq = ++sendSequence;
   sending = true;
   $("send").disabled = true;
   renderConfirmation();
+  renderModel();
   clearNotice();
   try {
     const result = await api(request.path, request.body);
+    if (seq !== sendSequence) return;
     pendingRequest = null;
     if (request.path === "/api/messages") $("message").value = "";
     if (result.rejected) notice(result.text, true);
     await refresh();
   } catch (error) {
+    if (seq !== sendSequence) return;
     notice(
       error.status
         ? error.message
@@ -351,9 +415,12 @@ async function sendPending() {
     if (error.status && error.status !== 409) pendingRequest = null;
     $("retry").classList.toggle("hidden", !pendingRequest);
   } finally {
-    sending = false;
-    $("send").disabled = false;
-    renderConfirmation();
+    if (seq === sendSequence) {
+      sending = false;
+      $("send").disabled = false;
+      renderConfirmation();
+      renderModel();
+    }
   }
 }
 async function confirmOperation(op) {
@@ -409,6 +476,14 @@ document
     b.addEventListener("click", () => sendMessage(b.dataset.prompt)),
   );
 $("retry").addEventListener("click", () => sendPending());
+$("mode").addEventListener("change", renderModel);
+$("interrupt").addEventListener("click", () =>
+  interruptMessage().catch((e) => notice(e.message, true)),
+);
+setInterval(() => {
+  if (state && (sending || state.messages.some((message) => !message.response)))
+    refresh().catch(() => {});
+}, 2000);
 $("refresh").addEventListener("click", () =>
   refresh().catch((e) => notice(e.message, true)),
 );

@@ -15,7 +15,7 @@
       >
       <div class="environment">
         <span class="dot"></span>本機合成資料
-        <span class="mode">MOCK 模式</span>
+        <span class="mode" id="mode-badge">MOCK 模式</span>
       </div>
     </header>
     <main>
@@ -44,6 +44,18 @@
             </div>
             <span class="quiet-badge">先提議，再確認</span>
           </div>
+          <div class="model-controls">
+            <label for="mode">對話方式</label>
+            <select id="mode">
+              <option value="mock">Mock · 不使用 API</option>
+              <option value="fixed" disabled>真實模型 · 固定流程</option>
+              <option value="agent" disabled>真實模型 · 單一 Agent</option>
+            </select>
+            <p id="model-usage">正在讀取用量…</p>
+            <button id="interrupt" type="button" class="secondary hidden">
+              停止這次處理
+            </button>
+          </div>
           <div
             id="messages"
             class="messages"
@@ -71,8 +83,7 @@
             </button>
           </form>
           <p class="composer-note">
-            送出新訊息會取代尚未提交的操作。Mock
-            支援範例句型，也可使用右側表單。
+            送出新訊息會取代尚未提交的操作。等待模型時可先停止處理，再提出新的需求。
           </p>
         </section>
         <aside class="right-column">
@@ -170,7 +181,10 @@
     </main>
     <footer>
       <span>REPAIR DESK / LOCAL DEMO</span
-      ><span>結果來自資料庫查證 · 不連接真實維修服務 · 未使用真實模型</span>
+      ><span
+        >結果來自資料庫查證 · 不連接真實維修服務 ·
+        模型只提議，不代替你確認</span
+      >
     </footer>
   </body>
 </html>

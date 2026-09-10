@@ -11,6 +11,10 @@ CREATE TABLE IF NOT EXISTS messages (
     request_id TEXT NOT NULL, text TEXT NOT NULL, revision INTEGER NOT NULL,
     response TEXT, created REAL NOT NULL, UNIQUE(session_id, request_id)
 );
+CREATE TABLE IF NOT EXISTS interrupted_requests (
+    session_id TEXT NOT NULL REFERENCES sessions(id), request_id TEXT NOT NULL,
+    PRIMARY KEY(session_id,request_id)
+);
 CREATE TABLE IF NOT EXISTS bookings (
     id TEXT PRIMARY KEY, owner TEXT NOT NULL, service TEXT NOT NULL, slot TEXT NOT NULL,
     status TEXT NOT NULL CHECK(status IN ('active','cancelled')), version INTEGER NOT NULL

@@ -2,13 +2,14 @@
 
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from agent import mock
 from agent.models import Proposal
-from agent.service import Conflict, Forbidden
+from agent.service import TAIPEI, Conflict, Forbidden
 
 
 @dataclass(frozen=True)
@@ -68,6 +69,7 @@ def run_turn(
     model: Model,
     config,
     document="維修服務：冷氣與洗衣機，每日三個固定時段。",
+    live=False,
 ):
     if strategy not in ("fixed", "agent"):
         raise ValueError("Unknown orchestration strategy")
@@ -116,6 +118,15 @@ def run_turn(
             ),
         },
     ]
+    if live:
+        messages.insert(
+            1,
+            {
+                "role": "system",
+                "content": "Trusted current time: "
+                + datetime.fromtimestamp(service.clock(), TAIPEI).isoformat(),
+            },
+        )
     if strategy == "fixed":
         context = read_context()
         messages.append(
@@ -128,6 +139,8 @@ def run_turn(
     result = {"text": "已達執行步數上限，未自動提交任何操作。", "rejected": True}
     try:
         for _ in range(1 if strategy == "fixed" else 6):
+            if service.session(session)["revision"] != turn["revision"]:
+                raise Conflict("新意圖已取代這次模型處理。")
             decision = Decision.model_validate(model.respond(messages, config))
             trace.append(decision.model_dump())
             if decision.tool == "read_context" and strategy == "agent":
@@ -158,5 +171,14 @@ def run_turn(
                 raise Forbidden("模型要求了未授權的工具或不符合固定流程的步驟。")
     except (ValueError, Conflict, Forbidden) as exc:
         result = {"text": str(exc), "rejected": True}
+    except RuntimeError:
+        if not live:
+            raise
+        result = {
+            "text": "模型暫時無法完成（連線、服務或用量限制）。本次未自動提交；不會自動重送付費請求。可查看用量或改用表單。",
+            "rejected": True,
+        }
+    if live:
+        result["mode"] = strategy
     result["trace"] = trace
     return service.finish_turn(session, request_id, result)

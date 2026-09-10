@@ -13,6 +13,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from agent import mock
 from agent.models import Proposal
+from agent.orchestration import ModelConfig, run_turn
 from agent.service import BookingService, Conflict, Forbidden
 
 
@@ -23,6 +24,7 @@ class Input(BaseModel):
 class Message(Input):
     text: str = Field(min_length=1, max_length=2000)
     request_id: str = Field(min_length=1, max_length=100)
+    mode: Literal["mock", "fixed", "agent"] = "mock"
 
 
 class FormProposal(Input):
@@ -35,8 +37,18 @@ class Confirmation(Input):
     fault: Literal["none", "before_commit", "after_commit"] = "none"
 
 
-def create_app(database=None, demo_owner="demo-alice"):
+def create_app(database=None, demo_owner="demo-alice", model=None, enable_model=False):
     service = BookingService(database or os.environ.get("STATEFUL_DB", "data/bookings.db"))
+    if model is None and (enable_model or os.environ.get("STATEFUL_ENABLE_MODEL") == "1"):
+        from agent.live_model import LiveModel
+
+        root = Path(__file__).resolve().parent.parent
+        model = LiveModel(
+            root / "data/model-usage",
+            authorized=True,
+            api_key=os.environ.get("STATEFUL_OPENAI_API_KEY"),
+            baseline=root / "docs/evaluations/paid-pilot-01/usage-ledger.jsonl",
+        )
 
     @asynccontextmanager
     async def lifespan(app):
@@ -96,6 +108,8 @@ def create_app(database=None, demo_owner="demo-alice"):
             )
         result = service.snapshot(session_id)
         result["mode"] = "mock"
+        result["model_available"] = model is not None
+        result["model_usage"] = model.status() if hasattr(model, "status") else None
         return result
 
     def replay(turn):
@@ -105,6 +119,19 @@ def create_app(database=None, demo_owner="demo-alice"):
 
     @app.post("/api/messages")
     def message(body: Message, session: Session):
+        if body.mode != "mock":
+            if model is None:
+                raise HTTPException(409, "真實模型尚未啟用，請使用 mock 或表單。")
+            return run_turn(
+                service,
+                session,
+                body.request_id,
+                body.text,
+                body.mode,
+                model,
+                ModelConfig(),
+                live=True,
+            )
         turn = service.begin_turn(session, body.request_id, body.text)
         if turn["replayed"]:
             return replay(turn)
@@ -131,6 +158,12 @@ def create_app(database=None, demo_owner="demo-alice"):
             result = {"text": str(exc), "rejected": True}
         return service.finish_turn(session, body.request_id, result)
 
+    @app.post("/api/messages/{request_id}/interrupt")
+    def interrupt(request_id: str, session: Session):
+        if not 1 <= len(request_id) <= 100:
+            raise ValueError("Invalid request ID")
+        return service.interrupt_turn(session, request_id)
+
     @app.post("/api/proposals")
     def proposal(body: FormProposal, session: Session):
         raw = body.proposal.model_dump()
@@ -143,6 +176,7 @@ def create_app(database=None, demo_owner="demo-alice"):
             result = {"text": mock.describe(op), "operation": op}
         except (ValueError, Conflict, Forbidden) as exc:
             result = {"text": str(exc), "rejected": True}
+        result["mode"] = "form"
         return service.finish_turn(session, body.request_id, result)
 
     @app.post("/api/operations/{op_id}/confirm")
@@ -168,3 +202,8 @@ def create_app(database=None, demo_owner="demo-alice"):
         return FileResponse(static / "index.html")
 
     return app
+
+
+def create_live_app():
+    """Explicit opt-in factory; the launch command loads this project's .env."""
+    return create_app(enable_model=True)

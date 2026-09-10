@@ -78,6 +78,11 @@ class BookingService:
     def begin_turn(self, session, request_id, text):
         with self.db.connect(write=True) as db:
             who = self._session(db, session)
+            if db.execute(
+                "SELECT 1 FROM interrupted_requests WHERE session_id=? AND request_id=?",
+                (session, request_id),
+            ).fetchone():
+                raise Conflict("這個請求已中斷，請用新訊息提出需求。")
             old = db.execute(
                 "SELECT * FROM messages WHERE session_id=? AND request_id=?", (session, request_id)
             ).fetchone()
@@ -111,6 +116,35 @@ class BookingService:
                 "response": None,
                 "previous": self._decode(previous) if previous else None,
             }
+
+    def interrupt_turn(self, session, request_id):
+        with self.db.connect(write=True) as db:
+            who = self._session(db, session)
+            db.execute(
+                "INSERT OR IGNORE INTO interrupted_requests VALUES(?,?)", (session, request_id)
+            )
+            row = db.execute(
+                "SELECT revision FROM messages WHERE session_id=? AND request_id=?",
+                (session, request_id),
+            ).fetchone()
+            result = {
+                "text": "已停止這次操作。已送出的模型請求可能仍計費；已提交的預約須另行確認取消。",
+                "interrupted": True,
+            }
+            if row and row["revision"] == who["revision"]:
+                db.execute("UPDATE sessions SET revision=revision+1 WHERE id=?", (session,))
+                db.execute(
+                    "UPDATE operations SET status='cancelled',reason=?,updated=? WHERE session_id=? AND status IN ('draft','waiting_confirmation','executing')",
+                    ("使用者中斷", self.clock(), session),
+                )
+                db.execute(
+                    "UPDATE messages SET response=? WHERE session_id=? AND request_id=? AND response IS NULL",
+                    (json.dumps(result, ensure_ascii=False), session, request_id),
+                )
+                self._event(
+                    db, session, None, "cancelled", "使用者中斷模型處理；過期結果不得提交。"
+                )
+            return result
 
     def finish_turn(self, session, request_id, response):
         with self.db.connect(write=True) as db:

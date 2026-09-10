@@ -48,7 +48,8 @@ class OpenAIModel:
             output.flush()
             os.fsync(output.fileno())
 
-    def respond(self, messages, config):
+    @classmethod
+    def reservation(cls, messages, config):
         if config.model != "gpt-4.1-mini-2025-04-14" or config.max_output_tokens > 500:
             raise ValueError(
                 "Pilot pricing is only approved for the configured snapshot and output cap"
@@ -57,7 +58,10 @@ class OpenAIModel:
         # conservatively reserves token cost before dispatch. Unknown replies keep
         # their full reservation; there is no automatic transport retry.
         input_ceiling = len(json.dumps(messages, ensure_ascii=False).encode("utf-8")) + 2048
-        reserve = input_ceiling * self.INPUT_RATE + config.max_output_tokens * self.OUTPUT_RATE
+        return input_ceiling * cls.INPUT_RATE + config.max_output_tokens * cls.OUTPUT_RATE
+
+    def respond(self, messages, config):
+        reserve = self.reservation(messages, config)
         if self.requests >= self.max_requests or self.reserved_usd + reserve > self.budget_usd:
             raise BudgetExceeded("Paid evaluation request or cost cap reached")
         self.requests += 1
