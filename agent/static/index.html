@@ -44,18 +44,18 @@
             </div>
             <span class="quiet-badge">先提議，再確認</span>
           </div>
-          <div class="model-controls">
+          <details id="model-details" class="model-controls">
+            <summary>對話模式與用量</summary>
             <label for="mode">對話方式</label>
             <select id="mode">
-              <option value="mock">Mock · 不使用 API</option>
-              <option value="fixed" disabled>真實模型 · 固定流程</option>
-              <option value="agent" disabled>真實模型 · 單一 Agent</option>
+              <option value="mock">免費示範（固定句型）</option>
+              <option value="fixed" disabled>真實模型・固定流程（可能計費）</option>
+              <option value="agent" disabled>真實模型・單一 Agent（可能計費）</option>
             </select>
             <p id="model-usage">正在讀取用量…</p>
-            <button id="interrupt" type="button" class="secondary hidden">
-              停止這次處理
-            </button>
-          </div>
+          </details>
+          <p id="mode-help">免費示範使用固定句型，不呼叫付費模型。</p>
+          <button id="interrupt" type="button" class="secondary hidden">停止這次處理</button>
           <div
             id="messages"
             class="messages"
@@ -65,8 +65,8 @@
           ></div>
           <div class="suggestions">
             <button data-prompt="我要預約冷氣維修，明天 10:00">
-              預約冷氣維修</button
-            ><button data-prompt="查詢我的預約">查詢預約</button
+              冷氣維修・明天 10:00</button
+            ><button id="query-bookings">查看目前預約</button
             ><button data-prompt="先不要，放棄這次操作">先不要</button>
           </div>
           <form id="chat-form" class="composer">
@@ -82,8 +82,9 @@
               傳送 <span aria-hidden="true">↗</span>
             </button>
           </form>
+          <button id="confirmation-next" class="next-step hidden" type="button">已準備好，查看確認單</button>
           <p class="composer-note">
-            送出新訊息會取代尚未提交的操作。等待模型時可先停止處理，再提出新的需求。
+            送出新訊息會取代尚未提交的操作。只想查看安排，可按「查看目前預約」保留草案。等待模型時可先停止處理，再提出新的需求。
           </p>
         </section>
         <aside class="right-column">
@@ -115,6 +116,10 @@
               <button id="refresh" class="text-button">重新查詢</button>
             </div>
             <div id="bookings"></div>
+            <details id="booking-history">
+              <summary>已取消紀錄（0）</summary>
+              <div id="history-bookings"></div>
+            </details>
           </section>
           <details class="panel booking-form-panel">
             <summary>用表單安排預約 <span aria-hidden="true">＋</span></summary>
@@ -127,18 +132,21 @@
               <div class="form-row">
                 <div>
                   <label for="date">日期（台北）</label
-                  ><input id="date" type="date" required />
+                  ><input id="date" type="date" aria-describedby="date-error" required />
+                  <span id="date-error" class="field-error"></span>
                 </div>
                 <div>
                   <label for="time">時段</label
-                  ><select id="time">
+                  ><select id="time" aria-describedby="time-error">
                     <option>10:00</option>
                     <option>14:00</option>
                     <option>16:00</option>
                   </select>
+                  <span id="time-error" class="field-error"></span>
                 </div>
               </div>
-              <button class="secondary" type="submit">建立待確認操作</button>
+              <button class="secondary" type="submit">預覽預約</button>
+              <p class="form-help">下一步會請你確認，確認前不會修改預約。</p>
             </form>
           </details>
         </aside>
@@ -152,7 +160,10 @@
           <button id="recover" class="secondary">查證結果與恢復</button>
         </div>
         <div id="result" class="result" aria-live="polite"></div>
-        <ol id="events" class="events"></ol>
+        <details class="operation-details">
+          <summary>操作明細</summary>
+          <ol id="events" class="events"></ol>
+        </details>
       </section>
       <details class="demo panel">
         <summary>可靠性示範 <span>逾時 / 反悔 / 重啟</span></summary>

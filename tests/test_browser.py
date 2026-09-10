@@ -118,8 +118,10 @@ def test_browser_crud_reversal_timeout_and_real_restart(live_server):
         assert db_bookings(live_server)[0]["version"] == 1
 
         page.get_by_role("button", name="改期", exact=True).click()
-        expect(page.locator("#confirmation")).to_contain_text("操作草案")
-        send(page, "2030-01-09 14:00")
+        expect(page.locator("#reschedule-form")).to_be_visible()
+        page.locator("#reschedule-date").fill("2030-01-09")
+        page.locator("#reschedule-time").select_option("14:00")
+        page.get_by_role("button", name="預覽改期", exact=True).click()
         page.get_by_role("button", name="確認改期預約", exact=True).click()
         expect(page.locator(".booking .when")).to_contain_text("14:00")
         assert db_bookings(live_server)[0]["slot"] == "2030-01-09T14:00:00+08:00"
@@ -198,7 +200,7 @@ def test_form_retry_keeps_same_request_id_after_lost_response(live_server):
         page.route("**/api/proposals", lose_response, times=1)
         page.locator(".booking-form-panel summary").click()
         page.locator("#date").fill("2030-01-08")
-        page.get_by_role("button", name="建立待確認操作", exact=True).click()
+        page.get_by_role("button", name="預覽預約", exact=True).click()
         expect(page.locator("#retry")).to_be_visible()
         with page.expect_request("**/api/proposals") as sent:
             page.locator("#retry").click()
@@ -276,7 +278,9 @@ def test_reschedule_confirmation_blocks_after_booking_version_changes(live_serve
         booking = db_bookings(live_server)[0]
 
         page.get_by_role("button", name="改期", exact=True).click()
-        send(page, "2030-01-09 14:00")
+        page.locator("#reschedule-date").fill("2030-01-09")
+        page.locator("#reschedule-time").select_option("14:00")
+        page.get_by_role("button", name="預覽改期", exact=True).click()
         confirmation = page.locator("#confirmation")
         expect(confirmation).to_contain_text(booking["id"])
         expect(confirmation).to_contain_text("01/08")

@@ -20,9 +20,14 @@ let state,
   sending = false,
   confirming = false,
   sendSequence = 0,
-  refreshSequence = 0;
+  refreshSequence = 0,
+  rescheduleDraft = null,
+  uncertainOperationId = null,
+  serverExpiredOperations = new Set(),
+  confirmationTimer = null,
+  countdownOperation = null;
 const modeNames = {
-  mock: "MOCK",
+  mock: "免費示範",
   fixed: "固定流程 + LLM",
   agent: "單一 Agent",
   form: "表單",
@@ -91,6 +96,15 @@ async function refresh() {
   const next = await api("/api/state");
   if (seq !== refreshSequence) return;
   state = next;
+  if (
+    uncertainOperationId &&
+    !state.operations.some(
+      (op) =>
+        op.id === uncertainOperationId &&
+        ["waiting_confirmation", "executing"].includes(op.status),
+    )
+  )
+    uncertainOperationId = null;
   csrf = next.csrf;
   render();
 }
@@ -101,12 +115,20 @@ function render() {
   renderConfirmation();
   renderBookings();
   renderEvents();
+  $("confirmation-next").classList.toggle(
+    "hidden",
+    currentOp()?.status !== "waiting_confirmation",
+  );
 }
 function renderModel() {
   for (const option of $("mode").options)
     option.disabled = option.value !== "mock" && !state.model_available;
   $("mode").disabled = sending;
   $("mode-badge").textContent = modeNames[$("mode").value];
+  $("mode-help").textContent =
+    $("mode").value === "mock"
+      ? "目前操作不呼叫付費模型。"
+      : "真實模型模式可能產生 API 費用；所有操作仍需你確認。";
   const usage = state.model_usage;
   $("model-usage").textContent = usage
     ? `${state.model_name} · 累計 ${usage.requests}/${usage.max_requests} 次（含評估）。已知用量 USD ${usage.actual_usd.toFixed(5)}；保守預留 ${usage.reserved_usd.toFixed(4)}/${usage.budget_usd.toFixed(2)}。${usage.unknown_requests} 次用量待查證。`
@@ -144,19 +166,33 @@ function renderMessages() {
   const list = $("messages");
   const nearBottom =
     list.scrollHeight - list.scrollTop - list.clientHeight < 90;
-  list.replaceChildren();
   if (!state.messages.length) {
+    list.replaceChildren();
     const welcome = node("div", undefined, "welcome");
     welcome.append(
       node("div", "↳", "welcome-symbol"),
-      node("h3", "今天需要安排什麼維修？"),
-      node("p", "告訴我維修項目與時間。你可以隨時更改想法，準備好後再確認。"),
-      node("p", "可選 Mock 範例句型或已啟用的真實模型；所有資料都是模擬預約。"),
+      node("h3", "安排一筆模擬維修預約"),
+      node("p", "選擇項目與時間，確認後才會保存。本示範不會聯絡維修人員。"),
+      node("p", "支援今天、明天、後天或 YYYY-MM-DD；時段為 10:00、14:00、16:00。也可以用表單選日期。"),
     );
     list.append(welcome);
     return;
   }
-  for (const message of state.messages) {
+  list.querySelector(".welcome")?.remove();
+  const wanted = new Set();
+  const messages = [...state.messages].sort((a, b) => a.revision - b.revision);
+  let older = list.querySelector("#older-messages");
+  if (messages.length > 4 && !older) {
+    older = node("details", undefined, "older-messages");
+    older.id = "older-messages";
+    older.append(node("summary", "查看先前對話"), node("div"));
+    list.prepend(older);
+  } else if (messages.length <= 4 && older) {
+    older.remove();
+    older = null;
+  }
+  const olderCount = Math.max(0, messages.length - 4);
+  for (const [messageIndex, message] of messages.entries()) {
     let userText = message.text;
     try {
       const p = JSON.parse(userText);
@@ -173,7 +209,19 @@ function renderMessages() {
           "這則訊息尚待處理；如程序剛重啟，請重新查詢。",
       ],
     ]) {
-      const entry = node("div", undefined, "chat-entry " + speaker);
+      const key = `${message.request_id}-${speaker}`;
+      wanted.add(key);
+      let entry = list.querySelector(`[data-message-key="${CSS.escape(key)}"]`);
+      if (!entry) {
+        entry = node("div", undefined, "chat-entry " + speaker);
+        entry.dataset.messageKey = key;
+      }
+      const destination = messageIndex < olderCount ? older.lastElementChild : list;
+      if (entry.parentElement !== destination) destination.append(entry);
+      const signature = JSON.stringify([text, message.response, speaker]);
+      if (entry.dataset.renderSignature === signature) continue;
+      entry.dataset.renderSignature = signature;
+      entry.replaceChildren();
       entry.append(
         node(
           "span",
@@ -199,9 +247,14 @@ function renderMessages() {
         if (message.response.verification?.text)
           entry.append(node("div", message.response.verification.text, "verification"));
       }
-      list.append(entry);
+      if (speaker === "assistant" && message.response?.show_form)
+        entry.append(
+          button("用表單選時間", "secondary", () => openRelevantForm()),
+        );
     }
   }
+  for (const entry of list.querySelectorAll("[data-message-key]"))
+    if (!wanted.has(entry.dataset.messageKey)) entry.remove();
   if (nearBottom || sending) list.scrollTop = list.scrollHeight;
 }
 function currentOp() {
@@ -214,6 +267,19 @@ function renderConfirmation() {
   target.replaceChildren();
   const op = currentOp();
   if (!op) {
+    stopConfirmationTimer();
+    const committed = state.operations[0]?.status === "committed" ? state.operations[0] : null;
+    if (committed?.receipt?.booking) {
+      const booking = committed.receipt.booking;
+      const summary = node("div", undefined, "ticket-body committed-summary");
+      summary.append(
+        node("strong", `已${actions[committed.action].replace("預約", "")}預約`),
+        node("p", `${booking.service} · ${when(booking.slot)}`),
+        button("查看目前安排", "secondary", () => focusBookings()),
+      );
+      target.append(summary);
+      return;
+    }
     target.append(
       node(
         "p",
@@ -224,6 +290,7 @@ function renderConfirmation() {
     return;
   }
   const body = node("div", undefined, "ticket-body");
+  body.dataset.operationId = op.id;
   body.append(
     node("div", actions[op.action], "ticket-action"),
     badge(op.status),
@@ -246,24 +313,39 @@ function renderConfirmation() {
   ])
     dl.append(node("dt", label), node("dd", value));
   body.append(dl);
-  const expired = Date.now() / 1000 >= op.expires;
+  if (uncertainOperationId === op.id || op.status === "executing") {
+    stopConfirmationTimer();
+    body.append(
+      node("div", "結果未知，正在查證。請勿重做或重新送出。", "notice"),
+      button("查證結果與恢復", "primary", recover),
+      button("放棄這次操作", "secondary", async () => {
+        await api(`/api/operations/${op.id}/abandon`, {});
+        await refresh();
+      }),
+    );
+    target.append(body);
+    return;
+  }
+  const expired =
+    serverExpiredOperations.has(op.id) ||
+    remainingConfirmationSeconds(op.expires) === 0;
   if (staleBooking)
     body.append(node("div", "預約資料或版本已變更，無法依這張確認單提交。請重新提出操作。", "notice error"));
-  body.append(
-    node(
-      "div",
-      `操作 ${op.id.slice(0, 10)} · ${expired ? "確認已過期，請重新提出" : "確認期限 " + new Date(op.expires * 1000).toLocaleTimeString("zh-TW", { hour12: false })}`,
-      "ticket-meta",
-    ),
-  );
+  const expiry = node("div", undefined, "ticket-meta");
+  expiry.id = "confirmation-expiry";
+  expiry.dataset.expired = String(expired);
+  body.append(expiry);
   const controls = node("div", undefined, "ticket-buttons");
   if (op.status === "waiting_confirmation" && !expired) {
     const confirm = button("確認" + actions[op.action], "primary", () =>
       confirmOperation(op),
     );
+    confirm.dataset.confirmAction = "true";
     confirm.disabled = confirming || sending || !!pendingRequest || staleBooking;
     controls.append(confirm);
   }
+  if (op.status === "waiting_confirmation" && expired)
+    controls.append(button("重新填寫", "primary", () => restoreOperation(op)));
   if (op.status === "executing")
     controls.append(button("查證結果與恢復", "primary", recover));
   controls.append(
@@ -275,22 +357,98 @@ function renderConfirmation() {
   );
   body.append(controls);
   target.append(body);
+  updateConfirmationExpiry(op);
+  startConfirmationTimer(op);
+}
+
+function remainingConfirmationSeconds(expires, nowMs = Date.now()) {
+  return Math.max(0, Math.ceil(expires - nowMs / 1000));
+}
+function stopConfirmationTimer() {
+  if (confirmationTimer) clearInterval(confirmationTimer);
+  confirmationTimer = null;
+  countdownOperation = null;
+}
+function updateConfirmationExpiry(op) {
+  const target = $("confirmation-expiry");
+  if (!target || currentOp()?.id !== op.id) return;
+  const remaining = serverExpiredOperations.has(op.id)
+    ? 0
+    : remainingConfirmationSeconds(op.expires);
+  target.textContent = remaining
+    ? `操作 ${op.id.slice(0, 10)} · 請在 ${String(Math.floor(remaining / 60)).padStart(2, "0")}:${String(remaining % 60).padStart(2, "0")} 內確認`
+    : "確認已過期，預約尚未修改";
+  if (!remaining && target.dataset.expired !== "true") {
+    const moveFocus = document.activeElement?.dataset.confirmAction === "true";
+    target.dataset.expired = "true";
+    renderConfirmation();
+    $("confirmation-expiry").setAttribute("role", "status");
+    if (moveFocus) {
+      $("confirmation-expiry").tabIndex = -1;
+      $("confirmation-expiry").focus();
+    }
+  }
+}
+function startConfirmationTimer(op) {
+  if (op.status !== "waiting_confirmation" || countdownOperation === op.id) return;
+  stopConfirmationTimer();
+  countdownOperation = op.id;
+  confirmationTimer = setInterval(() => updateConfirmationExpiry(op), 1000);
+}
+function restoreOperation(op) {
+  stopConfirmationTimer();
+  const booking = state.bookings.find((item) => item.id === op.payload.booking_id);
+  if (op.action === "reschedule" && booking) {
+    openReschedule(booking);
+    if (op.payload.slot) {
+      rescheduleDraft.date = op.payload.slot.slice(0, 10);
+      rescheduleDraft.time = op.payload.slot.slice(11, 16);
+      renderBookings();
+      $("reschedule-date")?.focus();
+    }
+  }
+  else if (op.action === "cancel" && booking) {
+    const card = document.querySelector(`[data-booking-id="${CSS.escape(booking.id)}"]`);
+    const cancel = [...card.querySelectorAll("button")].find(
+      (item) => item.textContent === "取消預約",
+    );
+    cancel?.focus();
+    card?.scrollIntoView({ behavior: "smooth", block: "center" });
+  } else {
+    $("service").value = op.payload.service || "冷氣維修";
+    if (op.payload.slot) {
+      $("date").value = op.payload.slot.slice(0, 10);
+      $("time").value = op.payload.slot.slice(11, 16);
+    }
+    document.querySelector(".booking-form-panel").open = true;
+    $("date").focus();
+  }
 }
 function renderBookings() {
   const target = $("bookings");
+  const history = $("history-bookings");
   target.replaceChildren();
+  history.replaceChildren();
   const active = state.bookings.filter((b) => b.status === "active");
-  $("booking-count").textContent = active.length;
-  if (!state.bookings.length) {
-    target.append(
-      node("p", "尚未安排預約。確認操作後，預約會顯示在這裡。", "empty"),
-    );
-    return;
+  const cancelled = state.bookings.filter((b) => b.status === "cancelled");
+  if (rescheduleDraft) {
+    const edited = state.bookings.find((item) => item.id === rescheduleDraft.bookingId);
+    if (!edited || edited.status !== "active") {
+      rescheduleDraft = null;
+      notice("這筆預約已取消，請重新查看目前安排。", true);
+    }
   }
-  for (const booking of [...state.bookings].sort(
-    (a, b) => (a.status === "cancelled") - (b.status === "cancelled"),
-  )) {
+  $("booking-count").textContent = active.length;
+  $("booking-history").querySelector("summary").textContent = `已取消紀錄（${cancelled.length}）`;
+  if (!active.length) {
+    target.append(
+      node("p", "目前沒有有效預約。可用上方範例或表單預覽新預約。", "empty"),
+    );
+    target.append(button("預覽新預約", "secondary", () => openRelevantForm()));
+  }
+  for (const booking of state.bookings) {
     const card = node("article", undefined, "booking " + booking.status);
+    card.dataset.bookingId = booking.id;
     const top = node("div", undefined, "booking-top");
     top.append(
       node("h3", booking.service),
@@ -312,16 +470,138 @@ function renderBookings() {
     if (booking.status === "active") {
       const controls = node("div", undefined, "booking-controls");
       controls.append(
-        button("改期", "text-button", () =>
-          submitProposal({ action: "reschedule", booking_id: booking.id }),
-        ),
+        button("改期", "text-button", () => openReschedule(booking)),
         button("取消預約", "text-button", () =>
           submitProposal({ action: "cancel", booking_id: booking.id }),
         ),
       );
       card.append(controls);
+      if (rescheduleDraft?.bookingId === booking.id)
+        card.append(buildRescheduleEditor(booking));
     }
-    target.append(card);
+    (booking.status === "active" ? target : history).append(card);
+  }
+}
+
+function taipeiDate(date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+function openReschedule(booking) {
+  const current = rescheduleDraft?.bookingId === booking.id ? rescheduleDraft : null;
+  rescheduleDraft = {
+    bookingId: booking.id,
+    originalSlot: booking.slot,
+    date: current?.date || booking.slot.slice(0, 10),
+    time: current?.time || booking.slot.slice(11, 16),
+    error: current?.error || "",
+    field: current?.field || "",
+  };
+  renderBookings();
+  $("reschedule-date")?.focus();
+}
+function buildRescheduleEditor(booking) {
+  const form = node("form", undefined, "reschedule-form");
+  form.id = "reschedule-form";
+  form.append(node("p", `原時間：${when(booking.slot)}`, "form-help"));
+  const dateLabel = node("label", "新日期（台北）");
+  dateLabel.htmlFor = "reschedule-date";
+  const date = node("input");
+  date.id = "reschedule-date";
+  date.type = "date";
+  date.required = true;
+  date.min = taipeiDate();
+  date.value = rescheduleDraft.date;
+  const timeLabel = node("label", "新時段");
+  timeLabel.htmlFor = "reschedule-time";
+  const time = node("select");
+  time.id = "reschedule-time";
+  for (const value of ["10:00", "14:00", "16:00"]) {
+    const option = node("option", value);
+    option.value = value;
+    time.append(option);
+  }
+  time.value = rescheduleDraft.time;
+  const error = node("span", rescheduleDraft.error, "field-error");
+  error.id = "reschedule-error";
+  for (const input of [date, time]) {
+    input.setAttribute("aria-describedby", "reschedule-error");
+    if (rescheduleDraft.field === (input === date ? "date" : "time"))
+      input.setAttribute("aria-invalid", "true");
+    input.addEventListener("input", () => {
+      rescheduleDraft.date = date.value;
+      rescheduleDraft.time = time.value;
+      rescheduleDraft.error = "";
+      rescheduleDraft.field = "";
+      input.removeAttribute("aria-invalid");
+      error.textContent = "";
+    });
+  }
+  const controls = node("div", undefined, "booking-controls");
+  controls.append(
+    button("預覽改期", "primary", async () => {
+      rescheduleDraft.date = date.value;
+      rescheduleDraft.time = time.value;
+      if (!validateSlot(date, time, error)) return;
+      await submitProposal({
+        action: "reschedule",
+        booking_id: booking.id,
+        slot: `${date.value}T${time.value}:00+08:00`,
+      });
+    }),
+    button("返回", "secondary", () => {
+      const bookingId = rescheduleDraft.bookingId;
+      rescheduleDraft = null;
+      renderBookings();
+      const card = document.querySelector(`[data-booking-id="${CSS.escape(bookingId)}"]`);
+      [...card.querySelectorAll("button")]
+        .find((item) => item.textContent === "改期")
+        ?.focus();
+    }),
+  );
+  form.append(dateLabel, date, timeLabel, time, error, controls);
+  form.addEventListener("submit", (event) => event.preventDefault());
+  return form;
+}
+function validateSlot(date, time, error) {
+  date.min = taipeiDate();
+  const allowed = ["10:00", "14:00", "16:00"];
+  let field = "";
+  let message = "";
+  if (!date.value || new Date(`${date.value}T${time.value}:00+08:00`).getTime() <= Date.now()) {
+    field = "date";
+    message = "請選擇尚未過去的日期與時段。";
+  } else if (!allowed.includes(time.value)) {
+    field = "time";
+    message = "請選擇 10:00、14:00 或 16:00。";
+  }
+  for (const input of [date, time]) input.removeAttribute("aria-invalid");
+  error.textContent = message;
+  if (!field) return true;
+  const input = field === "date" ? date : time;
+  input.setAttribute("aria-invalid", "true");
+  input.focus();
+  if (rescheduleDraft) Object.assign(rescheduleDraft, { error: message, field });
+  return false;
+}
+function openRelevantForm() {
+  const op = currentOp();
+  const booking = state.bookings.find((item) => item.id === op?.payload.booking_id);
+  if (booking && op?.action === "reschedule") openReschedule(booking);
+  else {
+    if (op?.payload.service) $("service").value = op.payload.service;
+    if (op?.payload.slot) {
+      $("date").value = op.payload.slot.slice(0, 10);
+      $("time").value = op.payload.slot.slice(11, 16);
+    } else if (op?.payload.date) {
+      $("date").value = op.payload.date;
+    }
+    document.querySelector(".booking-form-panel").open = true;
+    $("date").focus();
   }
 }
 function renderEvents() {
@@ -330,7 +610,9 @@ function renderEvents() {
   const latest = state.operations[0];
   const result = $("result");
   result.replaceChildren();
-  if (!latest) {
+  if (latest?.id === uncertainOperationId) {
+    result.textContent = "結果未知，正在查證。請勿重做；先查證原操作。";
+  } else if (!latest) {
     result.textContent =
       "尚無操作結果。每次確認後，這裡會顯示資料庫中的提交狀態。";
   } else if (latest.status === "committed") {
@@ -426,8 +708,11 @@ async function sendPending() {
       $("message").value === request.body.text
     )
       $("message").value = "";
-    if (result.rejected) notice(result.text, true);
+    if (result.rejected) {
+      notice(result.text, true);
+    }
     await refresh();
+    if (result.rejected) applyValidation(result.validation, request);
   } catch (error) {
     if (seq !== sendSequence) return;
     notice(
@@ -447,6 +732,25 @@ async function sendPending() {
     }
   }
 }
+function applyValidation(validation, request) {
+  if (!validation) return;
+  const isReschedule =
+    request.path === "/api/proposals" &&
+    request.body.proposal.action === "reschedule";
+  if (isReschedule && rescheduleDraft) {
+    rescheduleDraft.error = $("notice-text").textContent;
+    rescheduleDraft.field = validation.field;
+  }
+  const prefix = isReschedule ? "reschedule-" : "";
+  const field = validation.field === "slot" ? "date" : validation.field;
+  const input = $(`${prefix}${field}`);
+  const error = $(`${prefix}${prefix ? "error" : `${field}-error`}`);
+  if (input) {
+    input.setAttribute("aria-invalid", "true");
+    input.focus();
+  }
+  if (error) error.textContent = $("notice-text").textContent;
+}
 async function confirmOperation(op) {
   confirming = true;
   renderConfirmation();
@@ -456,6 +760,7 @@ async function confirmOperation(op) {
       confirmation: op.confirmation,
       fault: $("fault").value,
     });
+    uncertainOperationId = null;
     $("fault").value = "none";
     await refresh();
     if (result.delivery === "unknown")
@@ -466,6 +771,11 @@ async function confirmOperation(op) {
           : "工具回覆逾時，结果尚待查證。請查證原操作，或在提交前改變意圖。",
       );
   } catch (error) {
+    if (error.status === 409) {
+      if (error.message.includes("確認已過期")) serverExpiredOperations.add(op.id);
+      await refresh();
+    }
+    else if (!error.status) uncertainOperationId = op.id;
     notice(
       error.status
         ? error.message
@@ -475,12 +785,15 @@ async function confirmOperation(op) {
   } finally {
     confirming = false;
     renderConfirmation();
+    renderEvents();
   }
 }
 async function recover() {
   await api("/api/recover", {});
   clearNotice();
   await refresh();
+  uncertainOperationId = null;
+  renderConfirmation();
   notice("已完成查證；操作結果與目前預約已更新。");
 }
 $("chat-form").addEventListener("submit", (e) => {
@@ -508,14 +821,34 @@ setInterval(() => {
   if (state && (sending || state.messages.some((message) => !message.response)))
     refresh().catch(() => {});
 }, 2000);
-$("refresh").addEventListener("click", () =>
-  refresh().catch((e) => notice(e.message, true)),
-);
+async function focusBookings() {
+  $("bookings-heading").tabIndex = -1;
+  $("bookings-heading").focus();
+  $("bookings-heading").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+async function queryBookings() {
+  try {
+    await refresh();
+    const count = state.bookings.filter((booking) => booking.status === "active").length;
+    notice(`目前有 ${count} 筆有效預約。${currentOp() ? "待確認內容已保留。" : ""}`);
+    await focusBookings();
+  } catch (error) {
+    notice(error.message, true);
+  }
+}
+$("query-bookings").addEventListener("click", queryBookings);
+$("refresh").addEventListener("click", queryBookings);
+$("confirmation-next").addEventListener("click", () => {
+  $("confirmation-heading").tabIndex = -1;
+  $("confirmation-heading").focus();
+  $("confirmation-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+});
 $("recover").addEventListener("click", () =>
   recover().catch((e) => notice(e.message, true)),
 );
 $("booking-form").addEventListener("submit", (e) => {
   e.preventDefault();
+  if (!validateSlot($("date"), $("time"), $("date-error"))) return;
   submitProposal({
     action: "create",
     service: $("service").value,
@@ -523,10 +856,32 @@ $("booking-form").addEventListener("submit", (e) => {
   });
 });
 const tomorrow = new Date(Date.now() + 86400000);
-$("date").value = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Asia/Taipei",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-}).format(tomorrow);
+$("date").min = taipeiDate();
+$("date").value = taipeiDate(tomorrow);
+for (const id of ["date", "time"])
+  $(id).addEventListener("input", () => {
+    $(id).removeAttribute("aria-invalid");
+    $(`${id}-error`).textContent = "";
+  });
+window.addEventListener("focus", () => {
+  updateDateControls();
+  if (currentOp()) updateConfirmationExpiry(currentOp());
+});
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    updateDateControls();
+    if (currentOp()) updateConfirmationExpiry(currentOp());
+  }
+});
+function updateDateControls() {
+  const today = taipeiDate();
+  $("date").min = today;
+  const remainingToday = ["10:00", "14:00", "16:00"].some(
+    (time) => new Date(`${today}T${time}:00+08:00`).getTime() > Date.now(),
+  );
+  if ($("date").value === today && !remainingToday)
+    $("date").value = taipeiDate(new Date(Date.now() + 86400000));
+}
+for (const id of ["date", "time"])
+  $(id).addEventListener("focus", updateDateControls);
 refresh().catch((e) => notice("無法載入工作台：" + e.message, true));
