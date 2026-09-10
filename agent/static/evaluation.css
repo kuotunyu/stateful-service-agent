@@ -44,6 +44,10 @@ td {
   font-size: 21px;
   margin: 0;
 }
+.failure-note .secondary {
+  min-height: 44px;
+  margin-top: 4px;
+}
 .case {
   border-top: 1px solid var(--line);
 }
@@ -76,6 +80,28 @@ td {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.case-summary-line {
+  margin: 10px 0;
+}
+.case-reason {
+  font-weight: 650;
+}
+.case-metrics {
+  color: var(--muted);
+  font-size: 13px;
+}
+.raw-evidence {
+  margin-top: 12px;
+}
+.raw-evidence > summary {
+  color: var(--blue);
+  cursor: pointer;
+  font-size: 13px;
+  text-underline-offset: 4px;
+}
+.database-evidence {
+  margin-top: 22px;
+}
 .artifact-links {
   display: flex;
   flex-wrap: wrap;
@@ -88,7 +114,7 @@ td {
 }
 #case-filter {
   padding: 8px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--muted);
   border-radius: 6px;
   color: var(--ink);
   background: white;
@@ -102,6 +128,8 @@ td {
   td {
     padding: 12px 7px;
     font-size: 12px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   .table-scroll {
     padding: 0 12px;
