@@ -191,6 +191,14 @@ function renderMessages() {
         ),
         node("div", text, "bubble"),
       );
+      if (speaker === "assistant" && message.response?.response_kind === "model_text") {
+        entry.insertBefore(
+          node("span", "模型回覆（內容未經查證）", "speaker"),
+          entry.querySelector(".bubble"),
+        );
+        if (message.response.verification?.text)
+          entry.append(node("div", message.response.verification.text, "verification"));
+      }
       list.append(entry);
     }
   }
@@ -221,14 +229,26 @@ function renderConfirmation() {
     badge(op.status),
   );
   const dl = node("dl", undefined, "ticket-data");
+  const booking =
+    op.action === "create"
+      ? null
+      : state.bookings.find((item) => item.id === op.payload.booking_id);
+  const staleBooking =
+    op.action !== "create" &&
+    (!booking || booking.version !== op.expected_version);
   for (const [label, value] of [
-    ["維修項目", op.payload.service || "尚未指定"],
-    ["預約時間", when(op.payload.slot)],
+    ["預約編號", op.payload.booking_id || "新預約"],
+    ["維修項目", op.payload.service || booking?.service || "尚未指定"],
+    ["原預約時間", booking ? when(booking.slot) : op.action === "create" ? "不適用" : "無法查證"],
+    ["新預約時間", op.action === "cancel" ? "取消，不另排時間" : when(op.payload.slot)],
+    ["預期版本", op.expected_version ?? "不適用"],
     ["時區", "Asia/Taipei · UTC+8"],
   ])
     dl.append(node("dt", label), node("dd", value));
   body.append(dl);
   const expired = Date.now() / 1000 >= op.expires;
+  if (staleBooking)
+    body.append(node("div", "預約資料或版本已變更，無法依這張確認單提交。請重新提出操作。", "notice error"));
   body.append(
     node(
       "div",
@@ -241,7 +261,7 @@ function renderConfirmation() {
     const confirm = button("確認" + actions[op.action], "primary", () =>
       confirmOperation(op),
     );
-    confirm.disabled = confirming || sending || !!pendingRequest;
+    confirm.disabled = confirming || sending || !!pendingRequest || staleBooking;
     controls.append(confirm);
   }
   if (op.status === "executing")
@@ -401,7 +421,11 @@ async function sendPending() {
     const result = await api(request.path, request.body);
     if (seq !== sendSequence) return;
     pendingRequest = null;
-    if (request.path === "/api/messages") $("message").value = "";
+    if (
+      request.path === "/api/messages" &&
+      $("message").value === request.body.text
+    )
+      $("message").value = "";
     if (result.rejected) notice(result.text, true);
     await refresh();
   } catch (error) {

@@ -7,6 +7,8 @@ import time
 import uuid
 from datetime import date, datetime, timedelta, timezone
 
+from pydantic import ValidationError
+
 from agent.db import Database
 from agent.models import Proposal
 
@@ -57,6 +59,25 @@ class BookingService:
     def session(self, session):
         with self.db.connect() as db:
             return self._session(db, session)
+
+    def conversation(self, session, before_revision):
+        """Bounded persisted dialogue, without tokens, tool traces or operation objects."""
+        with self.db.connect() as db:
+            self._session(db, session)
+            rows = db.execute(
+                "SELECT text,response FROM messages WHERE session_id=? AND revision<? "
+                "AND response IS NOT NULL ORDER BY id DESC LIMIT 8",
+                (session, before_revision),
+            ).fetchall()
+        history = []
+        for row in reversed(rows):
+            response = json.loads(row["response"])
+            if response.get("interrupted") or response.get("superseded"):
+                continue
+            history.append(
+                {"user": row["text"][:2000], "assistant": response.get("text", "")[:2000]}
+            )
+        return history
 
     def _decode(self, row):
         result = dict(row)
@@ -159,6 +180,18 @@ class BookingService:
                 return json.loads(row["response"])
             if row["revision"] != who["revision"]:
                 response = {"text": "這則回覆已被較新的訊息取代。", "superseded": True}
+            elif response.get("response_kind") == "model_text":
+                committed = db.execute(
+                    "SELECT id FROM operations WHERE session_id=? AND revision=? AND status='committed'",
+                    (session, row["revision"]),
+                ).fetchall()
+                response["verification"] = {
+                    "status": "committed" if committed else "no_submission",
+                    "text": "資料庫查證：本輪已有提交收據，請查看操作結果。"
+                    if committed
+                    else "資料庫查證：這則回覆沒有提交任何預約變更。",
+                    "operation_ids": [op["id"] for op in committed],
+                }
             db.execute(
                 "UPDATE messages SET response=? WHERE session_id=? AND request_id=?",
                 (json.dumps(response, ensure_ascii=False), session, request_id),
@@ -187,8 +220,11 @@ class BookingService:
             raise ValueError("預約時段必須在未來。")
         return parsed.isoformat()
 
-    def propose(self, session, revision, raw):
-        proposal = Proposal.model_validate(raw)
+    def propose(self, session, revision, raw, *, observed_versions=None):
+        try:
+            proposal = Proposal.model_validate(raw)
+        except ValidationError:
+            raise ValueError("操作欄位格式無效，請只提供支援的維修項目與預約資料。") from None
         payload = proposal.model_dump()
         if payload["date"]:
             date.fromisoformat(payload["date"])
@@ -208,12 +244,21 @@ class BookingService:
             expected = None
             if proposal.action != "create" and proposal.booking_id:
                 booking = self._booking(db, who["owner"], proposal.booking_id)
+                if (
+                    observed_versions is not None
+                    and observed_versions.get(booking["id"]) != booking["version"]
+                ):
+                    raise Conflict("預約資訊尚未查詢或已變更，請重新查詢後提出操作。")
                 expected = booking["version"]
                 payload["service"] = booking["service"]
                 if proposal.action == "cancel":
                     payload["slot"] = booking["slot"]
             if payload["slot"] and proposal.action != "cancel":
                 payload["slot"] = self._slot(payload["slot"])
+                if (payload["date"] and payload["date"] != payload["slot"][:10]) or (
+                    payload["time"] and payload["time"] != payload["slot"][11:16]
+                ):
+                    raise ValueError("日期與時段欄位互相矛盾，請重新指定一致的預約時間。")
                 payload["date"], payload["time"] = payload["slot"][:10], payload["slot"][11:16]
             if proposal.action == "create" and proposal.booking_id:
                 raise ValueError("新預約不能指定既有預約編號。")

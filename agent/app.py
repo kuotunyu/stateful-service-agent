@@ -57,9 +57,26 @@ def create_app(database=None, demo_owner="demo-alice", model=None, enable_model=
 
     app = FastAPI(title="Stateful Service Agent", lifespan=lifespan)
     app.state.service = service
+    from agent.launch import database_fingerprint
+
+    cookie_name = f"repair_session_{database_fingerprint(service.path)}"
     app.add_middleware(
         TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"]
     )
+
+    def cookie_session(request):
+        for session_id in (
+            request.cookies.get(cookie_name),
+            request.cookies.get("repair_session"),
+        ):
+            if not session_id:
+                continue
+            try:
+                service.session(session_id)
+                return session_id
+            except Forbidden:
+                pass
+        return None
 
     @app.exception_handler(Conflict)
     async def conflict(request, exc):
@@ -85,7 +102,7 @@ def create_app(database=None, demo_owner="demo-alice", model=None, enable_model=
         return response
 
     def authenticated(request: Request):
-        session_id = request.cookies.get("repair_session", "")
+        session_id = cookie_session(request) or ""
         who = service.session(session_id)
         if request.method != "GET":
             origin = request.headers.get("origin")
@@ -99,13 +116,13 @@ def create_app(database=None, demo_owner="demo-alice", model=None, enable_model=
 
     @app.get("/api/state")
     def state(request: Request, response: Response):
-        session_id = request.cookies.get("repair_session")
-        if not session_id:
+        session_id = cookie_session(request)
+        result = service.snapshot(session_id) if session_id else None
+        if result is None:
             session_id = service.new_session(demo_owner)["id"]
-            response.set_cookie(
-                "repair_session", session_id, httponly=True, samesite="strict", max_age=86400
-            )
-        result = service.snapshot(session_id)
+            result = service.snapshot(session_id)
+        for name in (cookie_name, "repair_session"):
+            response.set_cookie(name, session_id, httponly=True, samesite="strict", max_age=86400)
         result["mode"] = "mock"
         result["model_available"] = model is not None
         result["model_name"] = ModelConfig().model
@@ -122,6 +139,7 @@ def create_app(database=None, demo_owner="demo-alice", model=None, enable_model=
             "app": "stateful-service-agent",
             "instance": instance_id(),
             "database": "ok",
+            "database_fingerprint": database_fingerprint(service.path),
             "pid": os.getpid(),
             "model_available": model is not None,
             "model_name": ModelConfig().model,

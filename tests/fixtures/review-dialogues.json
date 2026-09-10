@@ -1,0 +1,18 @@
+[
+  {
+    "id": "air_conditioner_clarification",
+    "request": "冷氣不太冷，想約 2041 年 7 月 23 日來檢查，時間還沒決定。",
+    "question": "當天有上午十點、下午兩點與四點，您想選哪個時段？",
+    "followup": "那就下午兩點吧。",
+    "proposal": {"action": "create", "service": "冷氣維修", "date": "2041-07-23", "time": "14:00"},
+    "slot": "2041-07-23T14:00:00+08:00"
+  },
+  {
+    "id": "washing_machine_clarification",
+    "request": "洗衣機脫水有怪聲，2041-08-06 可以安排嗎？先告訴我時段。",
+    "question": "可以選上午十點、下午兩點或下午四點，您要哪一個？",
+    "followup": "最後那個，謝謝。",
+    "proposal": {"action": "create", "service": "洗衣機維修", "date": "2041-08-06", "time": "16:00"},
+    "slot": "2041-08-06T16:00:00+08:00"
+  }
+]

@@ -21,6 +21,17 @@ def instance_id():
     return hashlib.sha256(str(ROOT).casefold().encode()).hexdigest()[:16]
 
 
+def database_fingerprint(database=None):
+    path = (
+        Path(database)
+        if database is not None
+        else Path(os.environ.get("STATEFUL_DB", "data/bookings.db"))
+    )
+    if database is None and not path.is_absolute():
+        path = ROOT / path
+    return hashlib.sha256(str(path.resolve()).casefold().encode()).hexdigest()[:16]
+
+
 def probe(port):
     try:
         response = httpx.get(f"http://127.0.0.1:{port}/api/health", timeout=1, trust_env=False)
@@ -35,11 +46,12 @@ def probe(port):
             return {"app": "unknown"} if connection.connect_ex(("127.0.0.1", port)) == 0 else None
 
 
-def matches(state, live):
+def matches(state, live, database=None):
     return (
         state.get("app") == "stateful-service-agent"
         and state.get("instance") == instance_id()
         and state.get("database") == "ok"
+        and state.get("database_fingerprint") == database_fingerprint(database)
         and (not live or state.get("model_available"))
     )
 

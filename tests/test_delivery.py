@@ -42,6 +42,7 @@ def test_launcher_reuses_matching_service_and_rejects_unrelated_port(monkeypatch
             "app": "stateful-service-agent",
             "instance": launch.instance_id(),
             "database": "ok",
+            "database_fingerprint": launch.database_fingerprint(),
             "model_available": False,
         },
     )

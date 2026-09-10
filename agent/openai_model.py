@@ -8,7 +8,7 @@ from typing import ClassVar
 
 import httpx
 
-from agent.orchestration import Decision
+from agent.orchestration import DecisionRejected, validate_decision
 
 
 class BudgetExceeded(RuntimeError):
@@ -153,6 +153,10 @@ class OpenAIModel:
             choice = data["choices"][0]
             if choice["finish_reason"] != "stop":
                 raise ValueError("Model output incomplete or refused")
-            return Decision.model_validate_json(choice["message"]["content"]).model_dump()
+            try:
+                candidate = json.loads(choice["message"]["content"])
+            except (ValueError, TypeError):
+                raise DecisionRejected() from None
+            return validate_decision(candidate).model_dump()
         except (KeyError, IndexError, TypeError):
             raise ValueError("Model returned no usable structured decision") from None

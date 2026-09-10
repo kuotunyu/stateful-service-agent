@@ -206,3 +206,90 @@ def test_form_retry_keeps_same_request_id_after_lost_response(live_server):
         expect(page.get_by_role("button", name="確認建立預約", exact=True)).to_be_visible()
         assert db_bookings(live_server) == []
         browser.close()
+
+
+def test_model_success_claim_shows_authoritative_no_submission(live_server):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(live_server["url"])
+        page.wait_for_load_state("networkidle")
+        state = page.evaluate("fetch('/api/state').then(response => response.json())")
+        state["messages"] = [
+            {
+                "request_id": "fake",
+                "text": "請預約",
+                "response": {
+                    "text": "預約已成功完成。",
+                    "response_kind": "model_text",
+                    "verification": {
+                        "status": "no_submission",
+                        "text": "資料庫查證：這則回覆沒有提交任何預約變更。",
+                    },
+                },
+            }
+        ]
+        page.route("**/api/state", lambda route: route.fulfill(json=state))
+        page.reload()
+        expect(page.locator("#messages")).to_contain_text("模型回覆（內容未經查證）")
+        expect(page.locator("#messages .verification")).to_have_text(
+            "資料庫查證：這則回覆沒有提交任何預約變更。"
+        )
+        browser.close()
+
+
+def test_message_typed_during_pending_response_is_preserved(live_server):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(live_server["url"])
+        page.wait_for_load_state("networkidle")
+        page.evaluate(
+            """
+            const realFetch = window.fetch;
+            window.fetch = async (...args) => {
+              if (args[0] === '/api/messages')
+                await new Promise(resolve => { window.releaseMessage = resolve; });
+              return realFetch(...args);
+            };
+            document.getElementById('message').value = '查詢預約';
+            document.getElementById('chat-form').requestSubmit();
+            setTimeout(() => { document.getElementById('message').value = '下一則訊息'; }, 20);
+            """
+        )
+        expect(page.locator("#message")).to_have_value("下一則訊息")
+        page.evaluate("window.releaseMessage()")
+        expect(page.locator("#send")).to_be_enabled()
+        expect(page.locator("#message")).to_have_value("下一則訊息")
+        browser.close()
+
+
+def test_reschedule_confirmation_blocks_after_booking_version_changes(live_server):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(live_server["url"])
+        page.wait_for_load_state("networkidle")
+        send(page, "預約冷氣維修 2030-01-08 10:00")
+        page.get_by_role("button", name="確認建立預約", exact=True).click()
+        expect(page.locator("#booking-count")).to_have_text("1")
+        booking = db_bookings(live_server)[0]
+
+        page.get_by_role("button", name="改期", exact=True).click()
+        send(page, "2030-01-09 14:00")
+        confirmation = page.locator("#confirmation")
+        expect(confirmation).to_contain_text(booking["id"])
+        expect(confirmation).to_contain_text("01/08")
+        expect(confirmation).to_contain_text("01/09")
+        expect(confirmation).to_contain_text("預期版本")
+
+        service = BookingService(live_server["path"])
+        with service.db.connect() as db:
+            db.execute(
+                "UPDATE bookings SET slot=?, version=version+1 WHERE id=?",
+                ("2030-01-10T16:00:00+08:00", booking["id"]),
+            )
+        page.locator("#refresh").click()
+        expect(confirmation).to_contain_text("預約資料或版本已變更")
+        expect(page.get_by_role("button", name="確認改期預約", exact=True)).to_be_disabled()
+        browser.close()
