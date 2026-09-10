@@ -39,7 +39,7 @@ uv run --env-file .env python -m uvicorn agent.app:create_live_app --factory --h
 ## 五分鐘展示
 
 1. 輸入「預約冷氣維修，明天 10:00」。確認前 DB 不變；確認後看預約、版本與收據。
-2. 預約卡按「改期」，輸入「後天 14:00」。核對原預約編號、原時間與新時間後確認；取消亦需確認。
+2. 預約卡按「改期」，直接選新日期與時段，按「預覽改期」。核對原預約編號、原時間與新時間後確認；取消亦需確認。
 3. 提出另一筆預約，再傳送「先不要」；舊確認失效，不新增預約。
 4. 展開「可靠性示範」，選「已提交，但回覆遺失」。確認後查證，仍只有一次效果。
 5. 選「提交前逾時」，確認後停止本專案前景終端，再用相同命令啟動；有效的已確認操作恢復一次。
@@ -47,6 +47,10 @@ uv run --env-file .env python -m uvicorn agent.app:create_live_app --factory --h
 
 確認期限五分鐘。未提交操作可放棄；已提交預約須另行提出並確認取消，不承諾任意撤銷。
 已發送的模型請求可能仍計費。模型文字標示未經查證；是否提交以 DB 查證與收據為準。
+
+「查看目前預約」與「重新查詢」保留待確認草案；在對話中送出新訊息則會取代舊意圖。
+免費 Mock 支援今天、明天、後天或明確日期，以及 10:00／14:00／16:00；不熟悉語法可直接用表單。
+錯誤時間可以接著修正，但舊確認不會復活。取消後的預約仍保存在「已取消紀錄」。
 
 ## 架構與邊界
 
@@ -74,6 +78,7 @@ uv run --no-env-file pytest -q
 uv run --no-env-file ruff check agent evals tests
 uv run --no-env-file ruff format --check agent evals tests
 node --check agent/static/app.js
+node --check agent/static/evaluation.js
 uv run --no-env-file python -m evals.holdout --output artifacts/holdout-mock-new
 ```
 
@@ -96,6 +101,7 @@ Mock 通過是工程證據，不是模型能力證據。
 ## 交付與限制
 
 - [目前進度](docs/status.md)、[審查修正](docs/review-fixes.md)、[新題組程序](docs/evaluations/holdout-protocol.md)。
+- [首次使用流程改善與驗收](docs/ux-review/2026-09-10/施工驗收紀錄.md)：操作入口、改期、錯誤接續、確認到期、評估閱讀與剩餘驗證限制。
 - 歷史：[初版實作](docs/implementation.md)、[4.1-mini 初測](docs/evaluations/paid-pilot-01/report.md)、[介面整合](docs/evaluations/live-smoke-01/report.md)。
 - 原始碼：[kuotunyu/stateful-service-agent](https://github.com/kuotunyu/stateful-service-agent)。工作台沒有對外部署。
 
