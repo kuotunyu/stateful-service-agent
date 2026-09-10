@@ -5,6 +5,7 @@ import sqlite3
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
+from threading import Lock
 
 from agent.openai_model import BudgetExceeded, OpenAIModel
 
@@ -28,6 +29,10 @@ class LiveModel:
         self.directory = Path(directory)
         self.directory.mkdir(parents=True, exist_ok=True)
         self.api_key, self.transport = api_key, transport
+        self._metrics_lock = Lock()
+        self.requests = self.input_tokens = self.output_tokens = 0
+        self.actual_usd = self.reserved_usd = 0.0
+        self.request_ids = []
         with self._db() as db:
             db.execute(
                 "CREATE TABLE IF NOT EXISTS policy (id INTEGER PRIMARY KEY, budget REAL, requests INTEGER)"
@@ -100,6 +105,10 @@ class LiveModel:
             ):
                 raise BudgetExceeded("Local model allowance reached; no request sent")
             db.execute("INSERT INTO calls VALUES(?,?,NULL)", (request_id, reserve))
+        with self._metrics_lock:
+            self.requests += 1
+            self.reserved_usd += reserve
+            self.request_ids.append(request_id)
         # No database transaction is held across the network. A crash leaves the
         # reservation intact. Each transport attempt has its own immutable ledger.
         adapter = OpenAIModel(
@@ -118,7 +127,23 @@ class LiveModel:
             ]
             response = next((row for row in rows if row["state"] == "response"), None)
             if response is not None:
+                with self._metrics_lock:
+                    self.actual_usd += response["actual_usd"]
+                    self.input_tokens += response["usage"]["prompt_tokens"]
+                    self.output_tokens += response["usage"]["completion_tokens"]
                 with self._db() as db:
                     db.execute(
                         "UPDATE calls SET actual=? WHERE id=?", (response["actual_usd"], request_id)
                     )
+
+
+def project_model(api_key, *, authorized=False, budget_usd=1.0):
+    """One project allowance, independent of CLI output or business DB paths."""
+    root = Path(__file__).resolve().parent.parent
+    return LiveModel(
+        root / "data/model-usage",
+        api_key=api_key,
+        authorized=authorized,
+        budget_usd=budget_usd,
+        baseline=root / "docs/evaluations/paid-pilot-01/usage-ledger.jsonl",
+    )

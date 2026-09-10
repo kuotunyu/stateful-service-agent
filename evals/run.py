@@ -212,13 +212,12 @@ def main():
     args = parser.parse_args()
     model = None
     if args.allow_paid:
-        from agent.openai_model import OpenAIModel
+        from agent.live_model import project_model
 
         if args.output.exists():
             parser.error("Output directory must be new; never reset an existing run's budget")
-        model = OpenAIModel(
+        model = project_model(
             os.environ.get("STATEFUL_OPENAI_API_KEY"),
-            args.output.with_suffix(".ledger.jsonl"),
             authorized=True,
             budget_usd=args.budget_usd,
         )

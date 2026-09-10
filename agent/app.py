@@ -40,14 +40,11 @@ class Confirmation(Input):
 def create_app(database=None, demo_owner="demo-alice", model=None, enable_model=False):
     service = BookingService(database or os.environ.get("STATEFUL_DB", "data/bookings.db"))
     if model is None and (enable_model or os.environ.get("STATEFUL_ENABLE_MODEL") == "1"):
-        from agent.live_model import LiveModel
+        from agent.live_model import project_model
 
-        root = Path(__file__).resolve().parent.parent
-        model = LiveModel(
-            root / "data/model-usage",
+        model = project_model(
             authorized=True,
             api_key=os.environ.get("STATEFUL_OPENAI_API_KEY"),
-            baseline=root / "docs/evaluations/paid-pilot-01/usage-ledger.jsonl",
         )
 
     @asynccontextmanager
