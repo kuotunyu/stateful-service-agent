@@ -85,6 +85,9 @@ uv run --no-env-file python -m evals.holdout --output artifacts/holdout-mock-new
 測試使用隔離資料庫與假模型，不產生 API 費用。瀏覽器測試僅啟停自己的測試 server。
 Mock 通過是工程證據，不是模型能力證據。
 
+[GitHub Actions 自動測試](https://github.com/kuotunyu/stateful-service-agent/actions/workflows/tests.yml)
+於 main 推送、Pull Request 或手動觸發時，在 Windows／Python 3.12 執行鎖定依賴安裝、Chromium 測試、Ruff 與 JavaScript 語法檢查。工作流程沒有 API 金鑰或部署步驟，也不渲染 Manim 影片。
+
 最新 [Luna 新版針對性評估](docs/evaluations/luna-holdout-02/report.md)：6 題 × 2 策略，兩者 DB 與任務皆 6/6；22 次 API、USD 0.004663。題型與第一輪部分重疊，不能據此推論一般能力或改善幅度。
 
 第一輪保存基線為 [Luna 凍結新題組](docs/evaluations/luna-holdout-01/report.md)：

@@ -5,6 +5,23 @@ from playwright.sync_api import expect, sync_playwright
 pytest_plugins = ["test_browser"]
 
 
+def test_baseline_explains_and_links_to_second_evaluation(live_server):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(live_server["url"] + "/evaluation")
+        expect(page.locator("body")).not_to_contain_text("尚未重新做模型能力評估")
+        link = page.get_by_role("link", name="第二輪 Luna 針對性評估", exact=True)
+        expect(link).to_have_attribute(
+            "href",
+            "https://github.com/kuotunyu/stateful-service-agent/blob/main/"
+            "docs/evaluations/luna-holdout-02/report.md",
+        )
+        expect(page.locator("body")).to_contain_text("歷史基線")
+        expect(page.locator("body")).to_contain_text("題型部分重疊")
+        browser.close()
+
+
 def test_failure_shortcut_opens_focuses_and_survives_reload(live_server):
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)

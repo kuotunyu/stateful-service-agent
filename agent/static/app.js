@@ -72,6 +72,7 @@ function when(slot) {
   if (!slot) return "尚未指定";
   return new Intl.DateTimeFormat("zh-TW", {
     timeZone: "Asia/Taipei",
+    year: "numeric",
     month: "2-digit",
     day: "2-digit",
     weekday: "short",
@@ -364,6 +365,12 @@ function renderConfirmation() {
 function remainingConfirmationSeconds(expires, nowMs = Date.now()) {
   return Math.max(0, Math.ceil(expires - nowMs / 1000));
 }
+function confirmationExpired(op) {
+  return (
+    op?.status === "waiting_confirmation" &&
+    (serverExpiredOperations.has(op.id) || remainingConfirmationSeconds(op.expires) === 0)
+  );
+}
 function stopConfirmationTimer() {
   if (confirmationTimer) clearInterval(confirmationTimer);
   confirmationTimer = null;
@@ -382,6 +389,7 @@ function updateConfirmationExpiry(op) {
     const moveFocus = document.activeElement?.dataset.confirmAction === "true";
     target.dataset.expired = "true";
     renderConfirmation();
+    renderEvents();
     $("confirmation-expiry").setAttribute("role", "status");
     if (moveFocus) {
       $("confirmation-expiry").tabIndex = -1;
@@ -643,6 +651,9 @@ function renderEvents() {
   } else if (latest.status === "executing") {
     result.textContent =
       "執行結果尚待查證。請按「查證結果與恢復」，系統會先查提交收據，再判斷是否恢復原操作。";
+  } else if (confirmationExpired(latest)) {
+    result.textContent =
+      "確認已過期，預約尚未修改。請在確認單按「重新填寫」後，再確認新的操作。";
   } else {
     result.textContent =
       latest.status === "draft"

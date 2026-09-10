@@ -157,17 +157,34 @@ def test_next_step_focuses_confirmation_and_countdown_expires_without_submit(liv
         page.goto(live_server["url"])
         send(page, "預約冷氣維修 2030-01-08 10:00")
         page.locator("#confirmation-next").click()
+        expect(page.locator("#confirmation")).to_contain_text("2030/01/08")
         expect(page.locator("#confirmation-heading")).to_be_focused()
         expect(page.locator("#confirmation-expiry")).to_contain_text("請在")
         page.get_by_role("button", name="確認建立預約", exact=True).focus()
         page.clock.fast_forward(301_000)
         expect(page.locator("#confirmation-expiry")).to_contain_text("確認已過期")
         expect(page.locator("#confirmation-expiry")).to_be_focused()
+        expect(page.locator("#result")).to_contain_text("確認已過期")
+        expect(page.locator("#result")).not_to_contain_text("正在等待你的確認")
+        page.locator("#refresh").click()
+        expect(page.locator("#result")).to_contain_text("確認已過期")
         Path("artifacts/ux-work").mkdir(parents=True, exist_ok=True)
         page.screenshot(path="artifacts/ux-work/expired-confirmation.png", full_page=True)
         expect(page.get_by_role("button", name="確認建立預約", exact=True)).to_have_count(0)
         expect(page.get_by_role("button", name="重新填寫", exact=True)).to_be_visible()
         assert db_bookings(live_server) == []
+        browser.close()
+
+
+def test_saved_booking_keeps_year_visible(live_server):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 390, "height": 844})
+        page.goto(live_server["url"])
+        create_booking(page)
+        expect(page.locator("#bookings")).to_contain_text("2030/01/08")
+        expect(page.locator("#result")).to_contain_text("2030/01/08")
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         browser.close()
 
 

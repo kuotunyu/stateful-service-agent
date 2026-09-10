@@ -1,0 +1,46 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      STATEFUL_ENABLE_MODEL: "0"
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+      - name: Install locked project dependencies
+        run: uv sync --locked
+      - name: Install test browser
+        run: uv run --no-env-file playwright install chromium
+      - name: Lint
+        run: uv run --no-env-file ruff check agent evals tests scripts
+      - name: Check Python formatting
+        run: uv run --no-env-file ruff format --check agent evals tests scripts
+      - name: Check application JavaScript
+        run: node --check agent/static/app.js
+      - name: Check evaluation JavaScript
+        run: node --check agent/static/evaluation.js
+      - name: Run isolated tests (no paid models)
+        run: uv run --no-env-file pytest -q --tb=short
