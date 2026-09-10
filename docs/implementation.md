@@ -21,8 +21,9 @@ remain authoritative. No network or GPU model is used by the default mock.
   create/change/cancel, intent reversal, lost response and refresh with real API requests.
 - [x] Evaluation: add bounded replay cases and two orchestration policies sharing tool access,
   confirmation rules, model interface and configuration. Compare DB snapshots and event records.
-  Report mock engineering results only. Real-model evaluation remains unrun until an explicit
-  model, request count and cost cap are authorized.
+  Report mock engineering results separately. First real-model pilot completed after explicit
+  USD 1 / 144-request authorization: 33 requests, USD 0.0100752 token cost; see
+  `docs/evaluations/paid-pilot-01/report.md` for results and limitations.
 - [x] Delivery: run all checks, inspect desktop/mobile screenshots, write concise README and
   failure examples, retain local source history and provide launch/demo commands.
 

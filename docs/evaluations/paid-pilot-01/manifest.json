@@ -1,0 +1,19 @@
+{
+  "recorded_at": "2026-09-10T11:56:46.995400+00:00",
+  "source_commit": "f3353aa86b08a2f3da9083dd62901a18ee710b69",
+  "model": "gpt-4.1-mini-2025-04-14",
+  "temperature": 0,
+  "max_output_tokens_per_request": 500,
+  "maximum_requests": 144,
+  "budget_usd": 1,
+  "suite": "12 pre-existing development cases, paired across fixed/agent, alternating order",
+  "scope": "first real-model pilot; no prompt or scorer changes during the run",
+  "sha256": {
+    "agent/orchestration.py": "e67a22a4919a3e47503aca3a0165053d0cb4dceee7339df74a3b995a8e234b61",
+    "agent/models.py": "7e8af267d5d892f843b1d73f270f66b4371ab48cd8714664e5725cd9f52ad9f1",
+    "agent/service.py": "793cc30b2eed711c576ad7c0093470f151795037d597466d13ed08e1a7a4b638",
+    "agent/openai_model.py": "3b3c0eb6f9b3448aecbf2ac5a6fbc3d8c9510f61272816fdfd3a43b662dfa4c3",
+    "evals/cases.py": "56903751bd18d552dbdbab35265440ab406bb67484fefe12cfcfbcbd1328179a",
+    "evals/run.py": "dfa13aac266aeec8bf5a952750cd5df59e44142b263f08aaf69d19d0ac7c7127"
+  }
+}

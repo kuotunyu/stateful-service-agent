@@ -1,0 +1,85 @@
+{
+  "kind": "post-run DB inspection; original scores unchanged",
+  "cases": [
+    {
+      "case": "reversal",
+      "strategy": "fixed",
+      "second_user_message": "先不要，放棄這次操作",
+      "second_response": {
+        "text": "已取消本次操作，未進行任何預約。",
+        "trace": [
+          {
+            "tool": "finish",
+            "arguments": {
+              "text": "已取消本次操作，未進行任何預約。"
+            }
+          }
+        ]
+      },
+      "operation_states": {
+        "cancelled": 1
+      },
+      "booking_count": 0
+    },
+    {
+      "case": "reversal",
+      "strategy": "agent",
+      "second_user_message": "先不要，放棄這次操作",
+      "second_response": {
+        "text": "已取消本次操作，未進行任何預約。",
+        "trace": [
+          {
+            "tool": "finish",
+            "arguments": {
+              "text": "已取消本次操作，未進行任何預約。"
+            }
+          }
+        ]
+      },
+      "operation_states": {
+        "cancelled": 1
+      },
+      "booking_count": 0
+    },
+    {
+      "case": "stale_confirmation",
+      "strategy": "fixed",
+      "second_user_message": "先不要，放棄這次操作",
+      "second_response": {
+        "text": "已取消本次操作，未進行任何預約。",
+        "trace": [
+          {
+            "tool": "finish",
+            "arguments": {
+              "text": "已取消本次操作，未進行任何預約。"
+            }
+          }
+        ]
+      },
+      "operation_states": {
+        "cancelled": 1
+      },
+      "booking_count": 0
+    },
+    {
+      "case": "stale_confirmation",
+      "strategy": "agent",
+      "second_user_message": "先不要，放棄這次操作",
+      "second_response": {
+        "text": "已取消本次操作，未進行任何預約。",
+        "trace": [
+          {
+            "tool": "finish",
+            "arguments": {
+              "text": "已取消本次操作，未進行任何預約。"
+            }
+          }
+        ]
+      },
+      "operation_states": {
+        "cancelled": 1
+      },
+      "booking_count": 0
+    }
+  ]
+}

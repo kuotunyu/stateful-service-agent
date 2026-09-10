@@ -79,10 +79,12 @@ uv run python -m evals.run --output artifacts/my-mock-run
 查詢／拒絕文字的檢查是有限的固定事實或詞彙檢查，不能完整評估回答品質。
 小樣本 p95 使用 nearest-rank，因此 12 案的 p95 是最大值；延遲包含本機業務處理，排除初始化。
 
-**Mock 結果不是模型能力或策略優劣的證據。** 真實模型尚未呼叫，API 支出為 0。
-目前為開發案例；正式能力報告需另行凍結未用於調整提示的題組，並保留失敗與未完成執行。
+**Mock 結果不是模型能力或策略優劣的證據。** 第一輪真實模型 pilot 已完成：
+兩策略各 12 案符合預期 DB 狀態，未授權修改與重複操作為 0；33 次 API 請求，token 計算費用 USD 0.0100752。
+完整 [真實模型比較報告](docs/evaluations/paid-pilot-01/report.md) 保存結果、版本、用量與限制。
+這是開發案例，只有六種不同初始提示；不能當作未見題組上的一般能力證明。
 
-## 真實模型 pilot：入口備妥，尚待預算
+## 真實模型 pilot：已完成首輪
 
 候選 `gpt-4.1-mini-2025-04-14`、temperature 0、每次最多 500 output tokens；
 12 案 × 2 策略，總共最多 **144 次請求、USD 1**。達上限即停止請求。
@@ -90,17 +92,20 @@ uv run python -m evals.run --output artifacts/my-mock-run
 官方標準價格：每百萬 input tokens USD 0.40、output tokens USD 1.60。
 [官方模型與價格](https://developers.openai.com/api/docs/models/gpt-4.1-mini)。
 
-僅在取得明確預算授權後，以本專案專用的 `STATEFUL_OPENAI_API_KEY` 環境變數執行：
+首輪已取得 USD 1 授權並完成，沒有超出上限。後續重跑會另外產生費用，需計入既有授權總額。
+本專案支援使用者指定的 `.env`；金鑰欄位為 `STATEFUL_OPENAI_API_KEY`，範例見 `.env.example`。
+只有明確執行付費命令才會載入 `.env`；預設網頁不會讀取金鑰。首輪啟動方式如下；
+該目錄與 ledger 現已存在，重複執行會被拒絕，不會重置首輪預算：
 
 ```powershell
-uv run python -m evals.run --output artifacts/paid-pilot-01 --allow-paid --budget-usd 1
+uv run --env-file .env python -m evals.run --output artifacts/paid-pilot-01 --allow-paid --budget-usd 1
 ```
 
 不要把金鑰貼進對話或讀取其他專案 `.env`。預設 UI 不讀取此金鑰。
 Adapter 只呼叫固定官方 endpoint，無自動重試。請求前以保守 token 上界預留費用並持久化 ledger；
 逾時保留預留額。既有 ledger 與輸出目錄不可重用，避免重啟重置同一輪預算。
 價格須在真正執行前再核對；應用程式估算不含稅或帳戶級額外收費。
-**真實端點尚未驗證**；adapter 測試僅使用隔離的 HTTP 測試回覆。
+真實端點已由首輪 33 次成功請求驗證。自動測試仍使用隔離的 HTTP 回覆，執行 `pytest` 不會產生 API 費用。
 
 ## 失敗案例
 
