@@ -19,10 +19,11 @@
 | 網頁與評估共用總預算 | 完成 | 相同 project allowance，單輪費用分開統計，不能用新目錄重置預算 |
 | 一鍵啟動、服務狀態與評估結果頁 | 完成 | start.cmd、/api/health、/evaluation；占用埠拒絕、同 DB 單 server 鎖、唯讀證據檔案 |
 | 自動測試、啟動命令、失敗案例、架構說明 | 完成 | 71 項測試；README 與逐輪驗證紀錄 |
-| GitHub repo／push／公開發布／部署 | 未執行，等待授權 | 依原始要求只在本機開發；預定 kuotunyu/stateful-service-agent |
+| GitHub repository／原始碼發布 | 完成 | 使用者授權後公開於 kuotunyu/stateful-service-agent；不含 .env 或執行資料庫 |
+| 對外部署 | 未執行 | 工作台維持本機執行 |
 
 最新證據見 [Luna 新題組結果](evaluations/luna-holdout-01/report.md)。累計 68 次 API、USD 0.0178262，仍在 USD 1 額度內。
 後續可選擇擴充題量／重複採樣與自由對話測試，以取得更強泛化證據；新題組已使用過，不能重跑後仍称未見題。
-對外展示尚待使用者授權建立 GitHub／發布；沒有自行進行。
+原始碼與保存的合成評估證據已公開：[GitHub repository](https://github.com/kuotunyu/stateful-service-agent)。實際工作台沒有對外部署。
 
 目前架構刻意限制在单一 server process、合成使用者與本機 SQLite。真實登入、多人正式服務、付款／通知／行事曆、GPU、多 Agent 平台不屬於本次交付範圍。

@@ -179,4 +179,5 @@ Adapter 只呼叫固定官方 endpoint，無自動重試。請求前以保守 to
 | 預算不足／模型回覆不完整 | 停止或記錄失敗，不假稱成功 |
 
 決策摘要見 [實作計畫](docs/implementation.md)。
-預定 GitHub：`kuotunyu/stateful-service-agent`。目前僅本機開發，沒有 remote、push 或部署。
+原始碼與評估證據：[kuotunyu/stateful-service-agent](https://github.com/kuotunyu/stateful-service-agent)。
+原始碼已依使用者授權公開；工作台仍在本機執行，沒有對外部署。

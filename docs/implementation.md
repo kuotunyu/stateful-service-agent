@@ -1,7 +1,7 @@
 # Stateful Service Agent — local implementation
 
 Approved 2026-09-10. Workspace: `D:\AI-Portfolio\CC_github部隊\stateful-service-agent`.
-Future repository: `kuotunyu/stateful-service-agent`; no remote creation or publication.
+Repository: `kuotunyu/stateful-service-agent`. Initially local-only; source publication was subsequently authorized by the user. Runtime deployment remains local.
 
 Goal: a repair booking UI whose reported outcome is backed by durable business state.
 Python + FastAPI serves a static browser UI and SQLite. CPU only, synthetic data; paid calls require explicit opt-in.
