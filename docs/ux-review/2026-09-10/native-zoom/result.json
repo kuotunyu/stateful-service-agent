@@ -1,0 +1,38 @@
+{
+  "browser": "152.0.4191.66",
+  "native_zoom": 2,
+  "measurements": [
+    {
+      "stage": "01-home",
+      "width": 640,
+      "scrollWidth": 640,
+      "dpr": 2,
+      "cssZoom": "1"
+    },
+    {
+      "stage": "02-reschedule-preview",
+      "width": 640,
+      "scrollWidth": 640,
+      "dpr": 2,
+      "cssZoom": "1"
+    },
+    {
+      "stage": "03-evaluation",
+      "width": 640,
+      "scrollWidth": 640,
+      "dpr": 2,
+      "cssZoom": "1"
+    }
+  ],
+  "booking": [
+    {
+      "id": "122f825222b541b5b1aad4d3efc4298e",
+      "owner": "demo-alice",
+      "service": "洗衣機維修",
+      "slot": "2030-05-02T16:00:00+08:00",
+      "status": "active",
+      "version": 2
+    }
+  ],
+  "screen_reader_tested": false
+}
