@@ -122,7 +122,6 @@ Mock 通過是工程證據，不是模型能力證據。
 ## 交付與限制
 
 - [目前進度](status.md)、[審查修正](review-fixes.md)、[新題組程序](evaluations/holdout-protocol.md)。
-- [首次使用流程改善與驗收](ux-review/2026-09-10/施工驗收紀錄.md)：操作入口、改期、錯誤接續、確認到期、評估閱讀與剩餘驗證限制。
 - [操作展示錄影與資料庫檢查點](demo/README.md)。
 - [逾時不等於失敗：Manim 中文解說動畫](demo/timeout-explainer/README.md)，約 52 秒，附文字稿、原始碼及既有證據來源。
 - 歷史：[初版實作](implementation.md)、[4.1-mini 初測](evaluations/paid-pilot-01/report.md)、[介面整合](evaluations/live-smoke-01/report.md)。
